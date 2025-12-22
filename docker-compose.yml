@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ./backend
+    container_name: learning-app-backend
+    ports:
+      - "${BACKEND_PORT}:8000"
+    volumes:
+      - ./backend:/app
+    env_file:
+      - envs/backend.${ENV_MODE}.env
+    restart: unless-stopped
+    networks:
+      netuorc: 
+        aliases:
+          - backend
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: learning-app-frontend
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - REACT_APP_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      netuorc: 
+        aliases:
+          - frontend
+
+
+networks:
+  netuorc:
+    driver: bridge
