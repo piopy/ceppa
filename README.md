@@ -8,7 +8,7 @@ Grazie all'integrazione di **Intelligenza Artificiale Generativa** e strumenti d
 ---
 
 ## Disclaimer
-L'applicazione è frutto di una progettazione volutamente "vibe", non ha intenzioni di essere un'applicazione di imparare le lingue, ma piuttosto un simpatico esperimento per capire come funziona Antigravity di Google.
+L'applicazione è frutto di una progettazione volutamente "vibe", non ha intenzioni di essere un'applicazione per imparare, ma piuttosto un simpatico esperimento per capire come funziona Antigravity di Google.
 
 ## 🏗️ Architettura del Progetto
 
