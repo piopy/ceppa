@@ -80,8 +80,8 @@ autolearn/
 
 1. **Clonare la repository**
    ```bash
-   git clone https://github.com/piopy/cippa.git
-   cd cippa
+   git clone https://github.com/piopy/ceppa.git
+   cd ceppa
    ```
 
 2. **Configurare le variabili d'ambiente**
@@ -231,7 +231,7 @@ GET    /config/languages       # Lingue disponibili
 - Controllare i log: `docker logs autolearn-backend-1`
 
 ### "Invalid API key"
-- Verificare che `GOOGLE_API_KEY` è corretto in `.env`
+- Verificare che la chiave sia corretta
 - Controllare che la chiave non è scaduta in Google AI Studio
 
 ### "Connection refused" al database
@@ -244,17 +244,3 @@ GET    /config/languages       # Lingue disponibili
 ## 📝 Licenza
 
 MIT - Vedi LICENSE per dettagli
-
----
-
-## 👤 Autore
-
-Creato come progetto VIBE per testare le capacità di Google Autogen
-
-**⚠️ Non adatto per uso in produzione.**
-
----
-
-## 📞 Support
-
-Per issue e segnalazioni, aprire un'issue su GitHub (cippa repository).
