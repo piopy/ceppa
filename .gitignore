@@ -49,6 +49,8 @@ Thumbs.db
 *.wmv
 
 envs/*.env
-!envs/backend.local.env
+!envs/local.env
 
 poetry.lock
+data/user_files/*
+!data/user_files/.gitkeep
