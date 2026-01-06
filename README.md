@@ -4,7 +4,10 @@
 
 ---
 
-## 📚 Descrizione
+## Disclaimer
+L'applicazione è frutto di una progettazione volutamente "vibe", non ha intenzioni di essere un'applicazione per imparare, ma piuttosto un simpatico esperimento per capire come funziona Antigravity di Google.
+
+## 🏗️ Architettura del Progetto
 
 **AutoLearn** è una piattaforma web per la generazione automatica e intelligente di corsi online multilingui. Utilizza l'API di Google Generative AI (Gemini) per:
 
