@@ -1,6 +1,6 @@
 # AutoLearn - Generazione Intelligente di Corsi
 
-⚠️ **DISCLAIMER**: Questo è un progetto **VIBE** (sperimentale) creato esclusivamente per testare le capacità di generazione automatica di contenuti con [Google Autogen](https://ai.google.dev/). **NON è un progetto di produzione.**
+⚠️ **DISCLAIMER**: Questo è un progetto **VIBE** (sperimentale) creato esclusivamente per testare le capacità di generazione automatica di contenuti con Antigravity. **NON è un progetto di produzione.**
 
 ---
 
