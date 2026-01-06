@@ -1,60 +1,91 @@
-import os
-from openai import OpenAI
-from dotenv import load_dotenv
+import json
+from openai import AsyncOpenAI
+from app.core.config import settings
 
-from .prompts import prompt
-from .search_service import SearchService
-
-load_dotenv()
+client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY, base_url=settings.OPENAI_BASE_URL)
 
 
 class LLMService:
-    def __init__(self):
-        self.api_key = os.getenv("OPENAI_API_KEY")
-        self.base_url = os.getenv(
-            "OPENAI_BASE_URL",
-            "https://generativelanguage.googleapis.com/v1beta/openai/",
-        )
-        self.llm_model = os.getenv("OPENAI_MODEL", "gemini-3-pro-preview")
-        self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
-        self.search_service = SearchService()
-
-    def generate_learning_content(
-        self, topic: str, custom_instructions: str = None
+    @staticmethod
+    async def generate_course_index(
+        topic: str, instructions: str = None, language: str = "en"
     ) -> str:
-        """
-        Generates comprehensive learning content about the topic in Markdown format.
-        """
-        system_prompt = prompt
-
-        # Perform web search to get context
-        search_context = self.search_service.search(topic)
-
-        user_prompt = f"""
-        Argomento richiesto: {topic}
+        lang_instruction = (
+            "Respond in Italian." if language == "it" else "Respond in English."
+        )
+        prompt = f"""
+        Act as an expert curriculum designer. create a comprehensive and detailed course syllabus for the topic: "{topic}".
+        {lang_instruction}
         
-        Contesto aggiornato dal web (usa queste informazioni se rilevanti per arricchire la guida):
-        {search_context}
+        {f"Additional User Instructions: {instructions}" if instructions else ""}
+
+        The output MUST be a valid JSON array of Modules. Each Module has a "title" and a list of "lessons".
+        Each Lesson has a "title" and a "path". The path should be a hierarchical number string (e.g. "1.1", "1.2").
         
-        Approfondisci l'argomento creando la guida come richiesto.
+        Example JSON format:
+        [
+            {{
+                "title": "Module 1: Introduction",
+                "lessons": [
+                    {{"title": "What is {topic}?", "path": "1.1"}},
+                    {{"title": "Setup and Installation", "path": "1.2"}}
+                ]
+            }}
+        ]
+        
+        Provide ONLY the JSON output. Do not include markdown formatting (like ```json), just the raw JSON.
+        Make the course deep and comprehensive.
         """
 
-        if custom_instructions and custom_instructions.strip():
-            user_prompt += f"""
-            
-            ISTRUZIONI AGGIUNTIVE DELL'UTENTE (Seguile scrupolosamente):
-            {custom_instructions}
-            """
+        response = await client.chat.completions.create(
+            model=settings.LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+        )
 
-        try:
-            response = self.client.chat.completions.create(
-                model=self.llm_model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            print(f"Error calling LLM: {e}")
-            raise e
+        content = response.choices[0].message.content.strip()
+        # Simple cleanup if the LLM wraps in code blocks despite instructions
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+
+        return content.strip()
+
+    @staticmethod
+    async def generate_lesson_content(
+        topic: str, lesson_title: str, context_index: str, language: str = "en"
+    ) -> str:
+        lang_instruction = (
+            "Write the lesson in Italian."
+            if language == "it"
+            else "Write the lesson in English."
+        )
+        prompt = f"""
+        Act as an expert instructor. Write a comprehensive lesson for the course "{topic}" on the specific lesson: "{lesson_title}".
+        {lang_instruction}
+        
+        The course context (index) is:
+        {context_index}
+        
+        Your output should be detailed, educational Markdown.
+        Structure:
+        1. Title
+        2. Introduction
+        3. Core Concepts (use subsections)
+        4. Examples (code blocks or practical examples)
+        5. Exercises (A section with 3-5 practical exercises or questions for the student to solve offline).
+        
+        Do not use LaTeX math delimiters like \\(. Use standard markdown.
+        Make it engaging and clear.
+        """
+
+        response = await client.chat.completions.create(
+            model=settings.LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+        )
+
+        return response.choices[0].message.content.strip()

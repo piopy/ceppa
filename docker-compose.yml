@@ -1,42 +1,55 @@
-version: '3.8'
-
 services:
   backend:
-    build: 
-      context: ./backend
-    container_name: learning-app-backend
+    build: ./backend
+    container_name: autolearn-backend
     ports:
-      - "${BACKEND_PORT}:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     volumes:
       - ./backend:/app
+      - ./data/user_files:/app/user_files
     env_file:
-      - envs/backend.${ENV_MODE}.env
-    restart: unless-stopped
+      - envs/${ENV_MODE}.env
+    depends_on:
+      - db
     networks:
-      netuorc: 
+      autolearn_network:
         aliases:
           - backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
-    build:
-      context: ./frontend
-    container_name: learning-app-frontend
+    build: ./frontend
+    container_name: autolearn-frontend
     ports:
-      - "${FRONTEND_PORT}:3000"
+      - "${FRONTEND_PORT:-5173}:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - REACT_APP_API_URL=http://backend:8000
-    depends_on:
-      - backend
-    restart: unless-stopped
+      - VITE_API_URL=http://localhost:${BACKEND_PORT:-8000}
     networks:
-      netuorc: 
+      autolearn_network:
         aliases:
           - frontend
+    command: npm run dev -- --host
 
+  db:
+    image: postgres:15-alpine
+    container_name: autolearn-db
+    env_file:
+      - envs/${ENV_MODE}.env
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      autolearn_network:
+        aliases:
+          - db
+
+volumes:
+  postgres_data:
 
 networks:
-  netuorc:
+  autolearn_network:
     driver: bridge
