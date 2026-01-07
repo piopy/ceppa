@@ -72,11 +72,20 @@ class LLMService:
 
     @staticmethod
     async def generate_lesson_content(
-        topic: str, lesson_title: str, context_index: str, language: str = "en"
+        topic: str,
+        lesson_title: str,
+        context_index: str,
+        language: str = "en",
+        feedback: str = None,
     ) -> str:
         lang_instruction = LLMService._get_language_instruction(language).replace(
             "Respond", "Write the lesson"
         )
+
+        feedback_instruction = ""
+        if feedback:
+            feedback_instruction = f"\n\nIMPORTANT: The user provided this feedback about the previous version:\n{feedback}\nPlease address these concerns and improve the lesson accordingly."
+
         prompt = f"""
         Act as an expert instructor. Write a comprehensive lesson for the course "{topic}" on the specific lesson: "{lesson_title}".
         {lang_instruction}
@@ -93,7 +102,7 @@ class LLMService:
         5. Exercises (A section with 3-5 practical exercises or questions for the student to solve offline).
         
         Do not use LaTeX math delimiters like \\(. Use standard markdown.
-        Make it engaging and clear.
+        Make it engaging and clear.{feedback_instruction}
         """
 
         response = await client.chat.completions.create(

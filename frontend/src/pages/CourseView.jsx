@@ -15,6 +15,9 @@ export default function CourseView() {
   const [lessonLoading, setLessonLoading] = useState(false);
   const [notes, setNotes] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [showRegenerateModal, setShowRegenerateModal] = useState(false);
+  const [regenerateFeedback, setRegenerateFeedback] = useState('');
+  const [regenerating, setRegenerating] = useState(false);
   
   // Get the base URL for media files
   const API_BASE_URL = client.defaults.baseURL.replace('/api/v1', '');
@@ -116,6 +119,32 @@ export default function CourseView() {
     }
   };
 
+  const handleRegenerate = async () => {
+    if (!regenerateFeedback.trim()) {
+      alert('Please provide feedback on what to improve.');
+      return;
+    }
+    setRegenerating(true);
+    try {
+      const res = await client.post(`/lessons/${currentLesson.id}/regenerate`, {
+        feedback: regenerateFeedback
+      });
+      setCurrentLesson(res.data);
+      setSuccessMsg('Lesson regenerated successfully!');
+      setShowRegenerateModal(false);
+      setRegenerateFeedback('');
+      
+      // Poll for new PDF
+      if (!res.data.pdf_path) {
+        pollForPdf(res.data.id);
+      }
+    } catch (err) {
+      alert('Failed to regenerate lesson.');
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
   const getLessonStatus = (path) => {
     return generatedLessons[path] || 'not-generated';
   };
@@ -145,6 +174,17 @@ export default function CourseView() {
           </div>
         ) : currentLesson ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
+            {/* Regenerate Button */}
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => setShowRegenerateModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition"
+              >
+                <RefreshCcw className="w-4 h-4" />
+                Regenerate Lesson
+              </button>
+            </div>
+            
             <div className="prose prose-indigo max-w-none">
               <ReactMarkdown>{currentLesson.content_markdown}</ReactMarkdown>
             </div>
@@ -282,6 +322,58 @@ export default function CourseView() {
           ))}
         </div>
       </div>
+      
+      {/* Regenerate Modal */}
+      {showRegenerateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8"
+          >
+            <h3 className="text-2xl font-bold mb-4 text-gray-900">Regenerate Lesson</h3>
+            <p className="text-gray-600 mb-6">
+              Please describe what you'd like to improve or change in this lesson. The AI will regenerate the content based on your feedback.
+            </p>
+            <textarea
+              value={regenerateFeedback}
+              onChange={e => setRegenerateFeedback(e.target.value)}
+              placeholder="e.g., Add more practical examples, simplify the explanations, include more code snippets..."
+              className="w-full h-40 p-4 border-2 border-gray-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition resize-none"
+              disabled={regenerating}
+            />
+            <div className="flex gap-4 mt-6 justify-end">
+              <button
+                onClick={() => {
+                  setShowRegenerateModal(false);
+                  setRegenerateFeedback('');
+                }}
+                disabled={regenerating}
+                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition disabled:opacity-50"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleRegenerate}
+                disabled={regenerating || !regenerateFeedback.trim()}
+                className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {regenerating ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Regenerating...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="w-5 h-5" />
+                    Rigenera
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
