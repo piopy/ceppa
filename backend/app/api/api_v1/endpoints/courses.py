@@ -1,14 +1,16 @@
 from typing import List, Any
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+import asyncio
+import json
 
 from app.api import deps
 from app.core.db import get_db
-from app.models.base import Course, User
+from app.core.config import settings
+from app.models.base import Course, User, Lesson
 from app.schemas import course as course_schema
 from app.services.llm_service import LLMService
-import json
 
 router = APIRouter()
 
@@ -155,3 +157,192 @@ async def delete_course(
     await db.commit()
 
     return {"message": "Course deleted successfully"}
+
+
+# Store generation status in memory (could be Redis in production)
+generation_status = {}
+
+
+@router.post("/{course_id}/generate-all-lessons")
+async def generate_all_lessons(
+    course_id: int,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Generate all lessons for a course in parallel with limited concurrency.
+    """
+    # Verify course ownership
+    course_result = await db.execute(
+        select(Course).where(Course.id == course_id, Course.user_id == current_user.id)
+    )
+    course = course_result.scalars().first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    # Parse index to get all lessons
+    try:
+        index_data = json.loads(course.index_json)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Invalid course index: {str(e)}")
+
+    all_lessons = []
+    for module in index_data:
+        for lesson in module.get("lessons", []):
+            all_lessons.append(
+                {
+                    "title": lesson["title"],
+                    "path": lesson["path"],
+                }
+            )
+
+    # Check which lessons already exist
+    lessons_result = await db.execute(
+        select(Lesson).where(Lesson.course_id == course_id)
+    )
+    existing_lessons = {l.path_in_index for l in lessons_result.scalars().all()}
+
+    lessons_to_generate = [l for l in all_lessons if l["path"] not in existing_lessons]
+
+    if not lessons_to_generate:
+        return {
+            "message": "All lessons already generated",
+            "total": len(all_lessons),
+            "to_generate": 0,
+        }
+
+    # Initialize status
+    status_key = f"course_{course_id}_user_{current_user.id}"
+    generation_status[status_key] = {
+        "total": len(lessons_to_generate),
+        "completed": 0,
+        "failed": 0,
+        "in_progress": True,
+        "errors": [],
+    }
+
+    # Start background task
+    background_tasks.add_task(
+        generate_lessons_background,
+        course_id,
+        course.title,
+        course.index_json,
+        getattr(course, "language", "en"),
+        lessons_to_generate,
+        current_user.id,
+        status_key,
+    )
+
+    return {
+        "message": "Generation started",
+        "total": len(all_lessons),
+        "already_generated": len(existing_lessons),
+        "to_generate": len(lessons_to_generate),
+        "status_key": status_key,
+    }
+
+
+@router.get("/{course_id}/generation-status")
+async def get_generation_status(
+    course_id: int,
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Get the status of ongoing lesson generation.
+    """
+    status_key = f"course_{course_id}_user_{current_user.id}"
+    status = generation_status.get(
+        status_key,
+        {
+            "total": 0,
+            "completed": 0,
+            "failed": 0,
+            "in_progress": False,
+            "errors": [],
+        },
+    )
+    return status
+
+
+async def generate_lessons_background(
+    course_id: int,
+    course_title: str,
+    index_json: str,
+    language: str,
+    lessons_to_generate: list,
+    user_id: int,
+    status_key: str,
+) -> None:
+    """
+    Background task to generate all lessons with limited concurrency.
+    """
+    from app.core.db import AsyncSessionLocal
+    from app.services.pdf_service import PDFService
+
+    # Create semaphore for concurrency control
+    semaphore = asyncio.Semaphore(settings.MAX_CONCURRENT_WORKERS)
+
+    async def generate_single_lesson(lesson_data):
+        async with semaphore:
+            try:
+                # Generate content
+                content = await LLMService.generate_lesson_content(
+                    course_title,
+                    lesson_data["title"],
+                    index_json,
+                    language,
+                )
+
+                # Save to database
+                async with AsyncSessionLocal() as session:
+                    new_lesson = Lesson(
+                        course_id=course_id,
+                        title=lesson_data["title"],
+                        path_in_index=lesson_data["path"],
+                        content_markdown=content,
+                    )
+                    session.add(new_lesson)
+                    await session.commit()
+                    await session.refresh(new_lesson)
+                    lesson_id = new_lesson.id
+
+                # Generate PDF
+                pdf_path = await PDFService.convert_markdown_to_pdf(
+                    content, user_id, course_title, lesson_data["title"]
+                )
+
+                # Update with PDF path
+                async with AsyncSessionLocal() as session:
+                    result = await session.execute(
+                        select(Lesson).where(Lesson.id == lesson_id)
+                    )
+                    lesson = result.scalars().first()
+                    if lesson:
+                        lesson.pdf_path = pdf_path
+                        await session.commit()
+
+                # Update status
+                generation_status[status_key]["completed"] += 1
+                return {"success": True, "lesson": lesson_data["title"]}
+
+            except Exception as e:
+                generation_status[status_key]["failed"] += 1
+                generation_status[status_key]["errors"].append(
+                    {
+                        "lesson": lesson_data["title"],
+                        "error": str(e),
+                    }
+                )
+                return {
+                    "success": False,
+                    "lesson": lesson_data["title"],
+                    "error": str(e),
+                }
+
+    # Generate all lessons in parallel
+    tasks = [generate_single_lesson(lesson) for lesson in lessons_to_generate]
+    await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Mark as complete
+    generation_status[status_key]["in_progress"] = False

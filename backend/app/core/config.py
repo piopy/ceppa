@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     OPENAI_BASE_URL: str
     LLM_MODEL: str = "gpt-3.5-turbo"
     DEFAULT_LANGUAGE: str = "en"  # en or it
+    MAX_CONCURRENT_WORKERS: int = 3
 
     class Config:
         case_sensitive = True
