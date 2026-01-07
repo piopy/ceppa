@@ -7,12 +7,28 @@ client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY, base_url=settings.OPENAI_B
 
 class LLMService:
     @staticmethod
+    def _get_language_instruction(language: str) -> str:
+        """Get language instruction based on language code."""
+        language_names = {
+            "it": "Italian",
+            "en": "English",
+            "es": "Spanish",
+            "fr": "French",
+            "de": "German",
+            "pt": "Portuguese",
+            "ru": "Russian",
+            "zh": "Chinese",
+            "ja": "Japanese",
+            "ar": "Arabic",
+        }
+        lang_name = language_names.get(language, language.upper())
+        return f"Respond in {lang_name}."
+
+    @staticmethod
     async def generate_course_index(
         topic: str, instructions: str = None, language: str = "en"
     ) -> str:
-        lang_instruction = (
-            "Respond in Italian." if language == "it" else "Respond in English."
-        )
+        lang_instruction = LLMService._get_language_instruction(language)
         prompt = f"""
         Act as an expert curriculum designer. create a comprehensive and detailed course syllabus for the topic: "{topic}".
         {lang_instruction}
@@ -56,13 +72,20 @@ class LLMService:
 
     @staticmethod
     async def generate_lesson_content(
-        topic: str, lesson_title: str, context_index: str, language: str = "en"
+        topic: str,
+        lesson_title: str,
+        context_index: str,
+        language: str = "en",
+        feedback: str = None,
     ) -> str:
-        lang_instruction = (
-            "Write the lesson in Italian."
-            if language == "it"
-            else "Write the lesson in English."
+        lang_instruction = LLMService._get_language_instruction(language).replace(
+            "Respond", "Write the lesson"
         )
+
+        feedback_instruction = ""
+        if feedback:
+            feedback_instruction = f"\n\nIMPORTANT: The user provided this feedback about the previous version:\n{feedback}\nPlease address these concerns and improve the lesson accordingly."
+
         prompt = f"""
         Act as an expert instructor. Write a comprehensive lesson for the course "{topic}" on the specific lesson: "{lesson_title}".
         {lang_instruction}
@@ -79,7 +102,7 @@ class LLMService:
         5. Exercises (A section with 3-5 practical exercises or questions for the student to solve offline).
         
         Do not use LaTeX math delimiters like \\(. Use standard markdown.
-        Make it engaging and clear.
+        Make it engaging and clear.{feedback_instruction}
         """
 
         response = await client.chat.completions.create(

@@ -120,3 +120,38 @@ async def read_course(
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     return course
+
+
+@router.delete("/{course_id}")
+async def delete_course(
+    course_id: int,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Delete a course and all its lessons.
+    """
+    from app.models.base import Lesson
+
+    # Verify course ownership
+    result = await db.execute(
+        select(Course).where(Course.id == course_id, Course.user_id == current_user.id)
+    )
+    course = result.scalars().first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    # Delete all lessons associated with this course
+    await db.execute(select(Lesson).where(Lesson.course_id == course_id))
+    lessons_result = await db.execute(
+        select(Lesson).where(Lesson.course_id == course_id)
+    )
+    lessons = lessons_result.scalars().all()
+    for lesson in lessons:
+        await db.delete(lesson)
+
+    # Delete the course
+    await db.delete(course)
+    await db.commit()
+
+    return {"message": "Course deleted successfully"}

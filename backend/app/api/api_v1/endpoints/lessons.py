@@ -152,6 +152,60 @@ async def get_lesson(
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
     return lesson
+
+
+@router.post("/{lesson_id}/regenerate", response_model=lesson_schema.LessonOut)
+async def regenerate_lesson(
+    lesson_id: int,
+    feedback: dict,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Regenerate a lesson with user feedback.
+    """
+    # Get the lesson and verify ownership
+    result = await db.execute(
+        select(Lesson)
+        .join(Course)
+        .where(Lesson.id == lesson_id, Course.user_id == current_user.id)
+    )
+    lesson = result.scalars().first()
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
+
+    # Get course for context
+    course_res = await db.execute(select(Course).where(Course.id == lesson.course_id))
+    course = course_res.scalars().first()
+
+    # Regenerate content with feedback
+    try:
+        language = getattr(course, "language", "en")
+        user_feedback = feedback.get("feedback", "")
+        content = await LLMService.generate_lesson_content(
+            course.title, lesson.title, course.index_json, language, user_feedback
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM Generation failed: {str(e)}")
+
+    # Update lesson content
+    lesson.content_markdown = content
+    lesson.pdf_path = None  # Reset PDF path since we need to regenerate it
+    await db.commit()
+    await db.refresh(lesson)
+
+    # Trigger PDF regeneration
+    from app.core.db import AsyncSessionLocal
+
+    background_tasks.add_task(
+        generate_pdf_background,
+        lesson.id,
+        content,
+        current_user.id,
+        course.title,
+        lesson.title,
+        AsyncSessionLocal,
+    )
+
     return lesson

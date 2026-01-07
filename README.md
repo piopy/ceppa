@@ -4,6 +4,8 @@
 
 ---
 
+![Schermata utente](screen.png)
+
 ## 🏗️ Architettura del Progetto
 
 **AutoLearn** è una piattaforma web per la generazione automatica e intelligente di corsi online multilingui. Utilizza l'API di Google Generative AI (Gemini) per:

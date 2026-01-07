@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import client from '../api/client';
-import { Plus, BookOpen, Clock, Loader2, Languages } from 'lucide-react';
+import { Plus, BookOpen, Clock, Loader2, Languages, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
@@ -9,7 +9,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [newTopic, setNewTopic] = useState('');
   const [language, setLanguage] = useState('it');
+  const [customLanguage, setCustomLanguage] = useState('');
   const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState(null);
 
   useEffect(() => {
     fetchCourses();
@@ -31,13 +33,31 @@ export default function Dashboard() {
     if (!newTopic) return;
     setCreating(true);
     try {
-      await client.post('/courses/', { topic: newTopic, language });
+      const selectedLanguage = language === 'custom' ? customLanguage : language;
+      await client.post('/courses/', { topic: newTopic, language: selectedLanguage });
       setNewTopic('');
       fetchCourses();
     } catch (err) {
       alert('Generation failed. Check your API key/Backend.');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDeleteCourse = async (e, courseId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
+      return;
+    }
+    setDeleting(courseId);
+    try {
+      await client.delete(`/courses/${courseId}`);
+      setCourses(courses.filter(c => c.id !== courseId));
+    } catch (err) {
+      alert('Failed to delete course.');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -70,11 +90,22 @@ export default function Dashboard() {
               >
                 <option value="it">🇮🇹 Italiano</option>
                 <option value="en">🇬🇧 English</option>
+                <option value="custom">✏️ Custom</option>
               </select>
             </div>
+            {language === 'custom' && (
+              <input 
+                type="text" 
+                placeholder="e.g., es, fr, de..."
+                value={customLanguage}
+                onChange={e => setCustomLanguage(e.target.value)}
+                disabled={creating}
+                className="px-4 py-4 text-sm border-2 border-gray-200 rounded-2xl focus:border-primary focus:ring-4 focus:ring-primary/10 transition outline-none shadow-sm w-32"
+              />
+            )}
             <button 
               type="submit"
-              disabled={creating || !newTopic}
+              disabled={creating || !newTopic || (language === 'custom' && !customLanguage)}
               className="px-8 py-4 bg-primary text-white font-bold rounded-2xl hover:scale-105 active:scale-95 transition flex items-center gap-2 disabled:opacity-50 disabled:hover:scale-100 shadow-lg shadow-primary/25"
             >
               {creating ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6" />}
@@ -105,17 +136,30 @@ export default function Dashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1 }}
                 key={course.id}
+                className="relative group"
               >
                 <Link 
                   to={`/course/${course.id}`}
-                  className="block p-6 bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-primary/5 transition group border border-gray-100"
+                  className="block p-6 bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-primary/5 transition border border-gray-100"
                 >
-                  <h4 className="text-2xl font-bold mb-4 group-hover:text-primary transition">{course.title}</h4>
+                  <h4 className="text-2xl font-bold mb-4 group-hover:text-primary transition pr-8">{course.title}</h4>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Clock className="w-4 h-4" />
                     <span>Started {new Date(course.created_at).toLocaleDateString()}</span>
                   </div>
                 </Link>
+                <button
+                  onClick={(e) => handleDeleteCourse(e, course.id)}
+                  disabled={deleting === course.id}
+                  className="absolute top-4 right-4 p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition opacity-0 group-hover:opacity-100 disabled:opacity-50 z-10"
+                  title="Delete course"
+                >
+                  {deleting === course.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                </button>
               </motion.div>
             ))}
           </div>
