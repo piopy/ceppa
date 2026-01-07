@@ -171,8 +171,8 @@ PUT    /lessons/{id}/complete  # Marca come completata
 GET    /config/languages       # Lingue disponibili
 ```
 
----
 
+---
 
 ## 📋 Funzionalità Attuali
 
@@ -202,15 +202,8 @@ GET    /config/languages       # Lingue disponibili
 - Password hashate con bcrypt
 - JWT con HS256
 - CORS configurato
-- No hardcoded secrets (gestiti via .env)
+- No hardcoded secrets (gestiti via ENV_MODE.env)
 - Validation Pydantic v2 su tutti gli input
-
-**NB**: Questo è un prototipo. Per produzione:
-- Implementare rate limiting
-- Aggiungere logging/monitoring
-- Implementare refresh token rotation
-- Aggiungere 2FA
-- Implementare backup database
 
 ---
 
