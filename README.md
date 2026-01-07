@@ -169,17 +169,6 @@ PUT    /lessons/{id}/complete  # Marca come completata
 GET    /config/languages       # Lingue disponibili
 ```
 
----
-
-## 🛠️ Variabili d'Ambiente
-
-| Variabile | Descrizione | Esempio |
-|-----------|-------------|---------|
-| `GOOGLE_API_KEY` | API key Google Generative AI | `AIzaSy...` |
-| `DATABASE_URL` | URL PostgreSQL | `postgresql://user:pass@postgres:5432/autolearn` |
-| `SECRET_KEY` | Secret per JWT signing | `super-secret-key` |
-| `DEFAULT_LANGUAGE` | Lingua di default | `it` o `en` |
-| `PYTHONUNBUFFERED` | Logs in real-time | `1` |
 
 ---
 
@@ -211,15 +200,8 @@ GET    /config/languages       # Lingue disponibili
 - Password hashate con bcrypt
 - JWT con HS256
 - CORS configurato
-- No hardcoded secrets (gestiti via .env)
+- No hardcoded secrets (gestiti via ENV_MODE.env)
 - Validation Pydantic v2 su tutti gli input
-
-**NB**: Questo è un prototipo. Per produzione:
-- Implementare rate limiting
-- Aggiungere logging/monitoring
-- Implementare refresh token rotation
-- Aggiungere 2FA
-- Implementare backup database
 
 ---
 
