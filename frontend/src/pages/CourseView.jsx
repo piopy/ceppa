@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import ReactMarkdown from 'react-markdown';
-import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen } from 'lucide-react';
+import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CourseView() {
@@ -15,6 +15,10 @@ export default function CourseView() {
   const [lessonLoading, setLessonLoading] = useState(false);
   const [notes, setNotes] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  
+  // Get the base URL for media files
+  const API_BASE_URL = client.defaults.baseURL.replace('/api/v1', '');
+  const MEDIA_URL = `${API_BASE_URL}/media`;
 
   useEffect(() => {
     fetchCourse();
@@ -62,11 +66,36 @@ export default function CourseView() {
         ...prev,
         [lesson.path]: res.data.is_completed ? 'completed' : 'generated'
       }));
+      
+      // If PDF not ready yet, poll for it
+      if (!res.data.pdf_path) {
+        pollForPdf(res.data.id);
+      }
     } catch (err) {
       alert('Failed to load lesson content.');
     } finally {
       setLessonLoading(false);
     }
+  };
+
+  const pollForPdf = async (lessonId) => {
+    let attempts = 0;
+    const maxAttempts = 20; // 10 seconds max
+    const interval = setInterval(async () => {
+      try {
+        const res = await client.get(`/lessons/${lessonId}`);
+        if (res.data.pdf_path) {
+          setCurrentLesson(prev => ({ ...prev, pdf_path: res.data.pdf_path }));
+          clearInterval(interval);
+        }
+        attempts++;
+        if (attempts >= maxAttempts) {
+          clearInterval(interval);
+        }
+      } catch (err) {
+        clearInterval(interval);
+      }
+    }, 500);
   };
 
   const handleUpdate = async () => {
@@ -143,15 +172,23 @@ export default function CourseView() {
                     {currentLesson.is_completed ? 'Completed' : 'Mark as Completed'}
                   </button>
                   {currentLesson.pdf_path && (
-                    <a 
-                      href={`http://localhost:8000/media/${currentLesson.pdf_path}`} 
-                      target="_blank" 
-                      rel="noreferrer"
-                      className="flex items-center gap-2 px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition"
-                    >
-                      <Download className="w-5 h-5" />
-                      Download PDF
-                    </a>
+                    <>
+                      <button
+                        onClick={() => window.open(`${MEDIA_URL}/${currentLesson.pdf_path}`, '_blank')}
+                        className="flex items-center gap-2 px-6 py-3 bg-indigo-100 text-indigo-700 rounded-xl font-bold hover:bg-indigo-200 transition"
+                      >
+                        <FileText className="w-5 h-5" />
+                        View PDF
+                      </button>
+                      <a 
+                        href={`${MEDIA_URL}/${currentLesson.pdf_path}`} 
+                        download
+                        className="flex items-center gap-2 px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition"
+                      >
+                        <Download className="w-5 h-5" />
+                        Download PDF
+                      </a>
+                    </>
                   )}
                 </div>
                 {successMsg && <span className="text-green-600 font-medium">{successMsg}</span>}
