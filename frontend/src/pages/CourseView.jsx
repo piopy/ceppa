@@ -226,7 +226,7 @@ export default function CourseView() {
                         )}
                       </div>
                       
-                      <span className="whitespace-nowrap transition-transform duration-[2000ms] ease-linear group-hover:-translate-x-full flex-1">
+                      <span className="whitespace-nowrap transition-transform duration-[3000ms] ease-linear group-hover:-translate-x-full flex-1">
                         {lesson.title}
                       </span>
                       
