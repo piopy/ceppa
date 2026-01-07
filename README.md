@@ -4,7 +4,12 @@
 
 ---
 
-![Schermata utente](screen.png)
+
+![Schermata utente](image.png)
+![Lezione](image-1.png)
+![PDF Generato](image-2.png)
+
+---
 
 ## 🏗️ Architettura del Progetto
 
