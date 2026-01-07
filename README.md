@@ -4,6 +4,8 @@
 
 ---
 
+![Schermata utente](screen.png)
+
 ## 🏗️ Architettura del Progetto
 
 **AutoLearn** è una piattaforma web per la generazione automatica e intelligente di corsi online multilingui. Utilizza l'API di Google Generative AI (Gemini) per:
@@ -171,17 +173,6 @@ GET    /config/languages       # Lingue disponibili
 
 ---
 
-## 🛠️ Variabili d'Ambiente
-
-| Variabile | Descrizione | Esempio |
-|-----------|-------------|---------|
-| `GOOGLE_API_KEY` | API key Google Generative AI | `AIzaSy...` |
-| `DATABASE_URL` | URL PostgreSQL | `postgresql://user:pass@postgres:5432/autolearn` |
-| `SECRET_KEY` | Secret per JWT signing | `super-secret-key` |
-| `DEFAULT_LANGUAGE` | Lingua di default | `it` o `en` |
-| `PYTHONUNBUFFERED` | Logs in real-time | `1` |
-
----
 
 ## 📋 Funzionalità Attuali
 
