@@ -7,12 +7,28 @@ client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY, base_url=settings.OPENAI_B
 
 class LLMService:
     @staticmethod
+    def _get_language_instruction(language: str) -> str:
+        """Get language instruction based on language code."""
+        language_names = {
+            "it": "Italian",
+            "en": "English",
+            "es": "Spanish",
+            "fr": "French",
+            "de": "German",
+            "pt": "Portuguese",
+            "ru": "Russian",
+            "zh": "Chinese",
+            "ja": "Japanese",
+            "ar": "Arabic",
+        }
+        lang_name = language_names.get(language, language.upper())
+        return f"Respond in {lang_name}."
+
+    @staticmethod
     async def generate_course_index(
         topic: str, instructions: str = None, language: str = "en"
     ) -> str:
-        lang_instruction = (
-            "Respond in Italian." if language == "it" else "Respond in English."
-        )
+        lang_instruction = LLMService._get_language_instruction(language)
         prompt = f"""
         Act as an expert curriculum designer. create a comprehensive and detailed course syllabus for the topic: "{topic}".
         {lang_instruction}
@@ -58,10 +74,8 @@ class LLMService:
     async def generate_lesson_content(
         topic: str, lesson_title: str, context_index: str, language: str = "en"
     ) -> str:
-        lang_instruction = (
-            "Write the lesson in Italian."
-            if language == "it"
-            else "Write the lesson in English."
+        lang_instruction = LLMService._get_language_instruction(language).replace(
+            "Respond", "Write the lesson"
         )
         prompt = f"""
         Act as an expert instructor. Write a comprehensive lesson for the course "{topic}" on the specific lesson: "{lesson_title}".

@@ -9,6 +9,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [newTopic, setNewTopic] = useState('');
   const [language, setLanguage] = useState('it');
+  const [customLanguage, setCustomLanguage] = useState('');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -31,7 +32,8 @@ export default function Dashboard() {
     if (!newTopic) return;
     setCreating(true);
     try {
-      await client.post('/courses/', { topic: newTopic, language });
+      const selectedLanguage = language === 'custom' ? customLanguage : language;
+      await client.post('/courses/', { topic: newTopic, language: selectedLanguage });
       setNewTopic('');
       fetchCourses();
     } catch (err) {
@@ -70,11 +72,22 @@ export default function Dashboard() {
               >
                 <option value="it">🇮🇹 Italiano</option>
                 <option value="en">🇬🇧 English</option>
+                <option value="custom">✏️ Custom</option>
               </select>
             </div>
+            {language === 'custom' && (
+              <input 
+                type="text" 
+                placeholder="e.g., es, fr, de..."
+                value={customLanguage}
+                onChange={e => setCustomLanguage(e.target.value)}
+                disabled={creating}
+                className="px-4 py-4 text-sm border-2 border-gray-200 rounded-2xl focus:border-primary focus:ring-4 focus:ring-primary/10 transition outline-none shadow-sm w-32"
+              />
+            )}
             <button 
               type="submit"
-              disabled={creating || !newTopic}
+              disabled={creating || !newTopic || (language === 'custom' && !customLanguage)}
               className="px-8 py-4 bg-primary text-white font-bold rounded-2xl hover:scale-105 active:scale-95 transition flex items-center gap-2 disabled:opacity-50 disabled:hover:scale-100 shadow-lg shadow-primary/25"
             >
               {creating ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6" />}
