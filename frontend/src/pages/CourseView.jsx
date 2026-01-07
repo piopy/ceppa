@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import ReactMarkdown from 'react-markdown';
-import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText } from 'lucide-react';
+import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CourseView() {
@@ -18,6 +18,8 @@ export default function CourseView() {
   const [showRegenerateModal, setShowRegenerateModal] = useState(false);
   const [regenerateFeedback, setRegenerateFeedback] = useState('');
   const [regenerating, setRegenerating] = useState(false);
+  const [generatingAll, setGeneratingAll] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState(null);
   
   // Get the base URL for media files
   const API_BASE_URL = client.defaults.baseURL.replace('/api/v1', '');
@@ -161,6 +163,62 @@ export default function CourseView() {
     return Object.values(generatedLessons).filter(status => status === 'completed').length;
   };
 
+  const handleGenerateAll = async () => {
+    if (!window.confirm('Vuoi generare tutte le lezioni mancanti? Questa operazione potrebbe richiedere alcuni minuti.')) {
+      return;
+    }
+    
+    setGeneratingAll(true);
+    setGenerationStatus({ total: 0, completed: 0, failed: 0, in_progress: true });
+    
+    try {
+      const res = await client.post(`/courses/${courseId}/generate-all-lessons`);
+      
+      if (res.data.to_generate === 0) {
+        alert('Tutte le lezioni sono già state generate!');
+        setGeneratingAll(false);
+        setGenerationStatus(null);
+        return;
+      }
+      
+      // Start polling for status
+      pollGenerationStatus();
+    } catch (err) {
+      console.error('Failed to start generation:', err);
+      alert('Errore nell\'avvio della generazione');
+      setGeneratingAll(false);
+      setGenerationStatus(null);
+    }
+  };
+
+  const pollGenerationStatus = async () => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await client.get(`/courses/${courseId}/generation-status`);
+        setGenerationStatus(res.data);
+        
+        // Update generated lessons map
+        await fetchGeneratedLessons();
+        
+        if (!res.data.in_progress) {
+          clearInterval(interval);
+          setGeneratingAll(false);
+          
+          if (res.data.failed > 0) {
+            alert(`Generazione completata con ${res.data.failed} errori. Controlla la console per i dettagli.`);
+            console.error('Generation errors:', res.data.errors);
+          } else {
+            setSuccessMsg('Tutte le lezioni sono state generate con successo!');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch status:', err);
+        clearInterval(interval);
+        setGeneratingAll(false);
+      }
+    }, 2000); // Poll every 2 seconds
+  };
+
   if (loading) return <div className="p-10 text-center"><Loader2 className="animate-spin inline mr-2" />Loading course...</div>;
 
   return (
@@ -246,8 +304,55 @@ export default function CourseView() {
       {/* Index Sidebar - Right */}
       <div className="w-80 border-l border-gray-100 bg-gray-50 overflow-y-auto">
         <div className="p-6 border-b border-gray-100 sticky top-0 bg-gray-50 z-10">
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Course Curriculum</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Course Curriculum</h2>
+            <button
+              onClick={handleGenerateAll}
+              disabled={generatingAll}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+                generatingAll 
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                  : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 shadow-md hover:shadow-lg'
+              }`}
+              title="Genera tutte le lezioni mancanti in parallelo"
+            >
+              {generatingAll ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Generate All</span>
+                </>
+              )}
+            </button>
+          </div>
           <h3 className="text-lg font-extrabold mt-1">{course.title}</h3>
+          
+          {/* Generation Status */}
+          {generationStatus && generationStatus.in_progress && (
+            <div className="mt-3 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="font-semibold text-indigo-900">Generazione in corso...</span>
+                <span className="text-indigo-700 font-bold">
+                  {generationStatus.completed} / {generationStatus.total}
+                </span>
+              </div>
+              <div className="w-full bg-indigo-200 rounded-full h-2 overflow-hidden">
+                <div 
+                  className="bg-gradient-to-r from-indigo-500 to-purple-600 h-full transition-all duration-500 rounded-full"
+                  style={{ width: `${generationStatus.total > 0 ? (generationStatus.completed / generationStatus.total) * 100 : 0}%` }}
+                />
+              </div>
+              {generationStatus.failed > 0 && (
+                <p className="text-xs text-red-600 mt-2 font-medium">
+                  {generationStatus.failed} errori
+                </p>
+              )}
+            </div>
+          )}
           
           {/* Progress Bar */}
           <div className="mt-4">
