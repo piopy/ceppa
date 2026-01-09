@@ -19,6 +19,10 @@ class CourseCreate(BaseModel):
     language: Optional[str] = None  # "en" or "it"
 
 
+class CourseUpdate(BaseModel):
+    title: Optional[str] = None
+
+
 class CourseOut(BaseModel):
     id: int
     title: str
