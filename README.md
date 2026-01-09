@@ -1,12 +1,17 @@
 # Ceppa (o Autolearn perchè faceva più figo) - Generazione Intelligente di Corsi
 
-⚠️ **DISCLAIMER**: Questo è un progetto **VIBE** (sperimentale) creato esclusivamente per testare le capacità di generazione automatica di contenuti con Antigravity. **NON è un progetto di produzione e devo dire che alcune parti tipo il dockerfile scritte cosi funzionano, certo, ma sono più che ottimizzabili.**
+⚠️ **DISCLAIMER**: Questo è un progetto "VIBE" (quindi sperimentale) creato esclusivamente per testare le capacità di generazione automatica di contenuti con Antigravity. 
+
+**NON è un progetto di produzione e devo dire che alcune parti tipo il dockerfile scritte cosi funzionano, certo, ma sono più che ottimizzabili.**
 
 ### Perchè è stato creato questo progetto?
 Ceppa nasce dalla voglia di sperimentare quanto i modelli di linguaggio sono capaci di insegnare e strutturare piani di apprendimento guidati oltre che generare codice e immagini di brainrots.
+
 Dopo 5 anni di apprendimento questi modelli sono in grado di generare contenuti di qualità accettabile per essere fruiti da utenti finali?
+
 Sono in grado di restituire indietro agli utenti quello che "hanno appreso" in modo strutturato e coerente?
-Ma soprattutto, qualcuno mi saprà spiegare perchè in python `(0.1 + 0.2) != 0.3`?
+
+Ma soprattutto, **qualcuno mi saprà spiegare perchè in python `(0.1 + 0.2) != 0.3`?**
 
 ---
 ## Alcuni screenshoots
