@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -244,8 +245,8 @@ export default function CourseView() {
               </button>
             </div>
             
-            <div className="prose prose-indigo max-w-none">
-              <ReactMarkdown>{currentLesson.content_markdown}</ReactMarkdown>
+            <div className="prose prose-indigo max-w-none text-justify">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{currentLesson.content_markdown}</ReactMarkdown>
             </div>
             
             <hr className="my-12" />
