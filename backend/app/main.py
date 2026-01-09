@@ -38,4 +38,4 @@ async def startup():
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to Autolearn.ai API"}
+    return {"message": "Welcome to Ceppa.ai API"}

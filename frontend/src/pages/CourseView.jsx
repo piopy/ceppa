@@ -105,16 +105,17 @@ export default function CourseView() {
 
   const handleUpdate = async () => {
     try {
+      const newCompletedState = !currentLesson.is_completed;
       await client.put(`/lessons/${currentLesson.id}`, {
         user_notes: notes,
-        is_completed: true
+        is_completed: newCompletedState
       });
-      setSuccessMsg('Lesson marked as completed!');
-      setCurrentLesson(prev => ({ ...prev, is_completed: true }));
+      setSuccessMsg(newCompletedState ? 'Lesson marked as completed!' : 'Lesson marked as incomplete!');
+      setCurrentLesson(prev => ({ ...prev, is_completed: newCompletedState }));
       // Update generated lessons map
       setGeneratedLessons(prev => ({
         ...prev,
-        [currentLesson.path_in_index]: 'completed'
+        [currentLesson.path_in_index]: newCompletedState ? 'completed' : 'generated'
       }));
     } catch (err) {
       alert('Failed to update progress.');

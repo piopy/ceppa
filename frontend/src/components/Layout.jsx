@@ -1,6 +1,7 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Book, PlusCircle, Home } from 'lucide-react';
+import { LogOut, Book, PlusCircle, Home, Github } from 'lucide-react';
+import versionData from '../version.json';
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -18,7 +19,7 @@ export default function Layout() {
         <div className="p-6">
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
             <Book className="w-8 h-8 text-primary" />
-            Autolearn.ai
+            Ceppa.ai
           </h1>
         </div>
         
@@ -28,6 +29,19 @@ export default function Layout() {
             Dashboard
           </Link>
         </nav>
+
+        <div className="px-4 py-3">
+          <p className="text-xs text-white/60 px-4 py-2 text-center">v{versionData.version}</p>
+          <a 
+            href="https://github.com/piopy/ceppa" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition"
+          >
+            <Github className="w-5 h-5" />
+            <span className="text-sm font-medium">View on GitHub</span>
+          </a>
+        </div>
 
         <div className="p-4 border-t border-white/10">
           <div className="flex items-center gap-3 px-4 py-3">
