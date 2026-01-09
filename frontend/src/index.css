@@ -24,3 +24,20 @@
 .prose pre {
   @apply bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4;
 }
+
+.prose table {
+  @apply w-full border-collapse my-6;
+}
+
+.prose table th,
+.prose table td {
+  @apply border border-gray-300 px-4 py-2;
+}
+
+.prose table thead th {
+  @apply bg-gray-100 font-bold text-left;
+}
+
+.prose table tbody tr:nth-child(even) {
+  @apply bg-gray-50;
+}

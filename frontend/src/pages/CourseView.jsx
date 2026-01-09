@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -105,16 +106,17 @@ export default function CourseView() {
 
   const handleUpdate = async () => {
     try {
+      const newCompletedState = !currentLesson.is_completed;
       await client.put(`/lessons/${currentLesson.id}`, {
         user_notes: notes,
-        is_completed: true
+        is_completed: newCompletedState
       });
-      setSuccessMsg('Lesson marked as completed!');
-      setCurrentLesson(prev => ({ ...prev, is_completed: true }));
+      setSuccessMsg(newCompletedState ? 'Lesson marked as completed!' : 'Lesson marked as incomplete!');
+      setCurrentLesson(prev => ({ ...prev, is_completed: newCompletedState }));
       // Update generated lessons map
       setGeneratedLessons(prev => ({
         ...prev,
-        [currentLesson.path_in_index]: 'completed'
+        [currentLesson.path_in_index]: newCompletedState ? 'completed' : 'generated'
       }));
     } catch (err) {
       alert('Failed to update progress.');
@@ -243,8 +245,8 @@ export default function CourseView() {
               </button>
             </div>
             
-            <div className="prose prose-indigo max-w-none">
-              <ReactMarkdown>{currentLesson.content_markdown}</ReactMarkdown>
+            <div className="prose prose-indigo max-w-none text-justify">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{currentLesson.content_markdown}</ReactMarkdown>
             </div>
             
             <hr className="my-12" />

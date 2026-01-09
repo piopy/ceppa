@@ -124,6 +124,31 @@ async def read_course(
     return course
 
 
+@router.put("/{course_id}", response_model=course_schema.CourseOut)
+async def update_course(
+    course_id: int,
+    course_in: course_schema.CourseUpdate,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Update course details (e.g., rename).
+    """
+    result = await db.execute(
+        select(Course).where(Course.id == course_id, Course.user_id == current_user.id)
+    )
+    course = result.scalars().first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    if course_in.title is not None:
+        course.title = course_in.title
+
+    await db.commit()
+    await db.refresh(course)
+    return course
+
+
 @router.delete("/{course_id}")
 async def delete_course(
     course_id: int,

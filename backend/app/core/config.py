@@ -3,7 +3,7 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Autolearn.ai"
+    PROJECT_NAME: str = "Ceppa.ai"
     API_V1_STR: str = "/api/v1"
 
     # Database

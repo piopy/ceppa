@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import client from '../api/client';
-import { Plus, BookOpen, Clock, Loader2, Languages, Trash2 } from 'lucide-react';
+import { Plus, BookOpen, Clock, Loader2, Languages, Trash2, Pencil } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
@@ -12,6 +12,8 @@ export default function Dashboard() {
   const [customLanguage, setCustomLanguage] = useState('');
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(null);
+  const [renaming, setRenaming] = useState(null);
+  const [newCourseName, setNewCourseName] = useState('');
 
   useEffect(() => {
     fetchCourses();
@@ -58,6 +60,24 @@ export default function Dashboard() {
       alert('Failed to delete course.');
     } finally {
       setDeleting(null);
+    }
+  };
+
+  const handleRenameCourse = async (e, courseId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const currentCourse = courses.find(c => c.id === courseId);
+    const name = prompt('Enter new course name:', currentCourse?.title);
+    if (!name || name === currentCourse?.title) return;
+    
+    setRenaming(courseId);
+    try {
+      const res = await client.put(`/courses/${courseId}`, { title: name });
+      setCourses(courses.map(c => c.id === courseId ? { ...c, title: res.data.title } : c));
+    } catch (err) {
+      alert('Failed to rename course.');
+    } finally {
+      setRenaming(null);
     }
   };
 
@@ -148,18 +168,32 @@ export default function Dashboard() {
                     <span>Started {new Date(course.created_at).toLocaleDateString()}</span>
                   </div>
                 </Link>
-                <button
-                  onClick={(e) => handleDeleteCourse(e, course.id)}
-                  disabled={deleting === course.id}
-                  className="absolute top-4 right-4 p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition opacity-0 group-hover:opacity-100 disabled:opacity-50 z-10"
-                  title="Delete course"
-                >
-                  {deleting === course.id ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-4 h-4" />
-                  )}
-                </button>
+                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 z-10">
+                  <button
+                    onClick={(e) => handleRenameCourse(e, course.id)}
+                    disabled={renaming === course.id}
+                    className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition disabled:opacity-50"
+                    title="Rename course"
+                  >
+                    {renaming === course.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Pencil className="w-4 h-4" />
+                    )}
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteCourse(e, course.id)}
+                    disabled={deleting === course.id}
+                    className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50"
+                    title="Delete course"
+                  >
+                    {deleting === course.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
               </motion.div>
             ))}
           </div>
