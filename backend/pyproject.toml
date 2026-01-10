@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "autolearn-backend"
+name = "ceppa-backend"
 version = "0.1.0"
 description = "Backend for Ceppa.ai"
 authors = ["piopy"]

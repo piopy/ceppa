@@ -1,7 +1,7 @@
 services:
   backend:
     build: ./backend
-    container_name: autolearn-backend
+    container_name: ceppa-backend
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
@@ -13,14 +13,14 @@ services:
       - db
     restart: unless-stopped
     networks:
-      autolearn_network:
+      ceppa_network:
         aliases:
           - backend
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build: ./frontend
-    container_name: autolearn-frontend
+    container_name: ceppa-frontend
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     volumes:
@@ -30,14 +30,14 @@ services:
     environment:
       - VITE_API_URL=http://localhost:${BACKEND_PORT:-8000}
     networks:
-      autolearn_network:
+      ceppa_network:
         aliases:
           - frontend
     command: npm run dev -- --host
 
   db:
     image: postgres:15-alpine
-    container_name: autolearn-db
+    container_name: ceppa-db
     env_file:
       - envs/${ENV_MODE}.env
     ports:
@@ -46,7 +46,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     networks:
-      autolearn_network:
+      ceppa_network:
         aliases:
           - db
 
@@ -54,5 +54,5 @@ volumes:
   postgres_data:
 
 networks:
-  autolearn_network:
+  ceppa_network:
     driver: bridge
