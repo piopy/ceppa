@@ -146,10 +146,9 @@ Ceppa/
 
 ### 2. Creare un Corso
 ```
-1. Cliccare "Create New Course"
-2. Inserire titolo e descrizione
-3. Selezionare lingua (Italiano/Inglese/Custom)
-4. Submit → l'AI genererà il corso
+1. Inserire cosa si vuole apprendere
+2. Selezionare lingua (Italiano/Inglese/Custom)
+3. Cliccare "Learn now" → l'AI genererà il corso
 ```
 
 ### 3. Generare Lezioni
@@ -158,7 +157,7 @@ Ceppa/
 2. Cliccare su una voce dell'indice o Generare tutte le lezioni dell'indice
 3. La lezione viene generata e mostrata
 4. Cliccare "Download PDF" per esportare, "Mark as Complete" per completare o "View Lesson" per aprire il PDF in un'altra tab
-5. E' possibile rigenerare la lezione se necessario
+5. E' possibile rigenerare la lezione se necessario indicando eventuali preferenze per migliorare la generazione
 ```
 
 ### 4. Tracciamento Progresso
