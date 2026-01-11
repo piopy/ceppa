@@ -240,6 +240,7 @@ GET    /config/languages       # Lingue disponibili
 ## 🐛 Troubleshooting
 
 ### "PDF generation failed"
+- Riprovare in un secondo momento
 - Assicurarsi che `data/user_files/` ha permessi 777
 - Verificare che pandoc è disponibile nel container
 - Controllare i log: `docker logs Ceppa-backend-1`
