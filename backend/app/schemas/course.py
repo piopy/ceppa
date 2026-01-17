@@ -44,3 +44,7 @@ class CourseList(BaseModel):
     all_lessons_completed: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class CourseReorder(BaseModel):
+    course_order: List[int]

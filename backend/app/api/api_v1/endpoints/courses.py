@@ -64,6 +64,7 @@ async def read_courses(
     result = await db.execute(
         select(Course)
         .where(Course.user_id == current_user.id)
+        .order_by(Course.position.asc().nulls_last(), Course.created_at.asc())
         .offset(skip)
         .limit(limit)
     )
@@ -129,6 +130,30 @@ async def get_course_lessons(
         }
         for lesson in lessons
     ]
+
+
+@router.put("/reorder", status_code=200)
+async def reorder_courses(
+    reorder_data: course_schema.CourseReorder,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Update the display order of user's courses.
+    course_order: List of course IDs in the desired order [first_id, second_id, ...]
+    """
+    for idx, course_id in enumerate(reorder_data.course_order):
+        result = await db.execute(
+            select(Course).where(
+                Course.id == course_id, Course.user_id == current_user.id
+            )
+        )
+        course = result.scalars().first()
+        if course:
+            course.position = idx
+
+    await db.commit()
+    return {"message": "Order updated successfully"}
 
 
 @router.get("/{course_id}", response_model=course_schema.CourseOut)
