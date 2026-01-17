@@ -499,23 +499,24 @@ async def download_full_course_pdf(
         content = lesson.content_markdown
         if content:
             import re
+
             # Replace smart quotes with regular quotes
             content = content.replace("\u2018", "'").replace("\u2019", "'")
             content = content.replace("\u201c", '"').replace("\u201d", '"')
             content = content.replace("\u2013", "-").replace("\u2014", "--")
-            
+
             # Remove Pandoc attributes and custom syntax
             # Remove {.class}, {#id}, {key=value} patterns
-            content = re.sub(r'\{[\.#]?[^\}]+\}', '', content)
-            
+            content = re.sub(r"\{[\.#]?[^\}]+\}", "", content)
+
             # Escape problematic patterns that Pandoc might interpret as metadata
             # Replace standalone --- with a safe alternative
-            content = re.sub(r'^---$', '___', content, flags=re.MULTILINE)
-            
+            content = re.sub(r"^---$", "___", content, flags=re.MULTILINE)
+
             # Fix italic Nota patterns that might confuse Pandoc
             # Replace *Nota * patterns with **Nota ** (bold instead of italic)
-            content = re.sub(r'\*Nota([^*]+)\*', r'**Nota\1**', content)
-            
+            content = re.sub(r"\*Nota([^*]+)\*", r"**Nota\1**", content)
+
             merged_md_parts.append(content)
 
         merged_md_parts.append("\n\n\\newpage\n\n")
