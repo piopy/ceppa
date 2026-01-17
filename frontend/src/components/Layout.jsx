@@ -1,11 +1,29 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Book, PlusCircle, Home, Github } from 'lucide-react';
+import { LogOut, Book, PlusCircle, Home, Github, ChevronLeft, ChevronRight } from 'lucide-react';
 import versionData from '../version.json';
+import { useState, useEffect } from 'react';
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [showSidebar, setShowSidebar] = useState(true);
+
+  // Listen for immersive mode changes from CourseView
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const immersiveMode = localStorage.getItem('immersiveMode') === 'true';
+      setShowSidebar(!immersiveMode);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('immersiveModeChange', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('immersiveModeChange', handleStorageChange);
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -14,8 +32,24 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden text-gray-900">
+      {/* Toggle Button for Sidebar */}
+      <button
+        onClick={() => setShowSidebar(!showSidebar)}
+        className="fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-secondary hover:bg-secondary/90 p-2 rounded-r-lg border border-l-0 border-white/20 transition shadow-md"
+        style={{ left: showSidebar ? '256px' : '0' }}
+        title={showSidebar ? 'Hide Sidebar' : 'Show Sidebar'}
+      >
+        {showSidebar ? (
+          <ChevronLeft className="w-4 h-4 text-white" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-white" />
+        )}
+      </button>
+      
       {/* Sidebar */}
-      <aside className="w-64 bg-secondary text-white flex flex-col shadow-xl">
+      <aside className={`bg-secondary text-white flex flex-col shadow-xl transition-all duration-300 ${
+        showSidebar ? 'w-64' : 'w-0'
+      } overflow-hidden`}>
         <div className="p-6">
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
             <Book className="w-8 h-8 text-primary" />

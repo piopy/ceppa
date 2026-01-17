@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle } from 'lucide-react';
+import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle, Maximize2, ChevronLeft, DownloadCloud } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CourseView() {
@@ -26,6 +26,10 @@ export default function CourseView() {
   const [questions, setQuestions] = useState([]);
   const [newQuestion, setNewQuestion] = useState('');
   const [askingQuestion, setAskingQuestion] = useState(false);
+  
+  // Immersive Mode & Sidebar Visibility
+  const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+  const [showRightSidebar, setShowRightSidebar] = useState(true);
   
   // Get the base URL for media files
   const API_BASE_URL = client.defaults.baseURL.replace('/api/v1', '');
@@ -192,6 +196,18 @@ export default function CourseView() {
   const getTotalLessons = () => {
     return index.reduce((acc, module) => acc + module.lessons.length, 0);
   };
+  
+  const areAllLessonsGenerated = () => {
+    const total = getTotalLessons();
+    const generated = getGeneratedCount();
+    return total > 0 && total === generated;
+  };
+  
+  const areAllLessonsCompleted = () => {
+    const total = getTotalLessons();
+    const completed = getCompletedCount();
+    return total > 0 && total === completed;
+  };
 
   const getGeneratedCount = () => {
     return Object.keys(generatedLessons).length;
@@ -262,7 +278,9 @@ export default function CourseView() {
   return (
     <div className="flex bg-white shadow-2xl rounded-l-3xl overflow-hidden h-full">
       {/* Content Area - Left (Central) */}
-      <div className="flex-1 overflow-y-auto p-12 bg-white">
+      <div className={`flex-1 overflow-y-auto p-12 bg-white transition-all duration-300 ${
+        !showRightSidebar ? 'mx-auto max-w-5xl' : ''
+      }`}>
         {lessonLoading ? (
           <div className="h-full flex flex-col items-center justify-center space-y-4">
              <Loader2 className="w-16 h-16 text-primary animate-spin" />
@@ -270,8 +288,28 @@ export default function CourseView() {
           </div>
         ) : currentLesson ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
-            {/* Regenerate Button */}
-            <div className="flex justify-end mb-4">
+            {/* Regenerate Button + Immersive Reader */}
+            <div className="flex justify-end mb-4 gap-3">
+              <button
+                onClick={() => {
+                  const newImmersiveMode = !isImmersiveMode;
+                  setIsImmersiveMode(newImmersiveMode);
+                  setShowRightSidebar(!newImmersiveMode); // Toggle: hide if entering immersive, show if exiting
+                  
+                  // Notify Layout component via localStorage and custom event
+                  localStorage.setItem('immersiveMode', newImmersiveMode.toString());
+                  window.dispatchEvent(new Event('immersiveModeChange'));
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition ${
+                  isImmersiveMode 
+                    ? 'bg-primary text-white hover:bg-indigo-700' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+                title="Toggle Immersive Reading Mode"
+              >
+                <Maximize2 className="w-4 h-4" />
+                {isImmersiveMode ? 'Exit Immersive' : 'Immersive Reader'}
+              </button>
               <button
                 onClick={() => setShowRegenerateModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition"
@@ -420,7 +458,29 @@ export default function CourseView() {
       </div>
 
       {/* Index Sidebar - Right */}
-      <div className="w-80 border-l border-gray-100 bg-gray-50 overflow-y-auto">
+      <div className="relative h-full">
+        {/* Toggle Button - Always visible, positioned relative to viewport */}
+        <button
+          onClick={() => {
+            setShowRightSidebar(!showRightSidebar);
+            if (isImmersiveMode) setIsImmersiveMode(false);
+          }}
+          className={`fixed right-0 top-1/2 -translate-y-1/2 z-30 bg-gray-100 hover:bg-gray-200 p-2 rounded-l-lg border border-gray-200 transition shadow-md ${
+            showRightSidebar ? '' : 'translate-x-0'
+          }`}
+          style={{ right: showRightSidebar ? '320px' : '0' }}
+          title={showRightSidebar ? 'Hide Index' : 'Show Index'}
+        >
+          {showRightSidebar ? (
+            <ChevronRight className="w-4 h-4 text-gray-600" />
+          ) : (
+            <ChevronLeft className="w-4 h-4 text-gray-600" />
+          )}
+        </button>
+        
+        <div className={`border-l border-gray-100 bg-gray-50 h-full overflow-y-auto transition-all duration-300 ${
+          showRightSidebar ? 'w-80 opacity-100' : 'w-0 opacity-0'
+        }`}>
         <div className="p-6 border-b border-gray-100 sticky top-0 bg-gray-50 z-10">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Course Curriculum</h2>
@@ -543,6 +603,45 @@ export default function CourseView() {
               </div>
             </div>
           ))}
+        </div>
+        
+        {/* Download Full PDF Button - Always visible */}
+        <div className="p-4 border-t border-gray-200 mt-4">
+          <button
+            onClick={async () => {
+              if (!areAllLessonsGenerated()) return;
+              
+              try {
+                const response = await client.get(`/courses/${courseId}/download-full-pdf`, {
+                  responseType: 'blob'
+                });
+                
+                // Create download link
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `${course.title}_complete.pdf`);
+                document.body.appendChild(link);
+                link.click();
+                link.parentNode.removeChild(link);
+                window.URL.revokeObjectURL(url);
+              } catch (err) {
+                console.error('Download failed:', err);
+                alert('Failed to download full course PDF. Make sure all lessons are generated.');
+              }
+            }}
+            disabled={!areAllLessonsGenerated()}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition shadow-lg ${
+              areAllLessonsGenerated() 
+                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:shadow-xl cursor-pointer' 
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+            title={areAllLessonsGenerated() ? 'Download complete course as single PDF' : `${getTotalLessons() - getGeneratedCount()} lesson(s) still need to be generated`}
+          >
+            <DownloadCloud className="w-5 h-5" />
+            {areAllLessonsGenerated() ? 'Download Complete Course PDF' : `Waiting for ${getTotalLessons() - getGeneratedCount()} lesson(s)...`}
+          </button>
+        </div>
         </div>
       </div>
       
