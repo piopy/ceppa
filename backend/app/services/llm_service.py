@@ -112,3 +112,45 @@ class LLMService:
         )
 
         return response.choices[0].message.content.strip()
+
+    @staticmethod
+    async def answer_lesson_question(
+        lesson_title: str,
+        lesson_content: str,
+        question: str,
+        language: str = "en",
+    ) -> str:
+        """
+        Answer a user question about a specific lesson using lesson context.
+        """
+        lang_instruction = LLMService._get_language_instruction(language)
+
+        # Limit context to avoid token limits (keep first 4000 chars)
+        truncated_content = (
+            lesson_content[:4000] if len(lesson_content) > 4000 else lesson_content
+        )
+
+        prompt = f"""
+        You are a helpful teaching assistant. A student is studying the lesson "{lesson_title}".
+        {lang_instruction}
+
+        Here is the lesson content:
+        ---
+        {truncated_content}
+        ---
+
+        The student asks: "{question}"
+
+        Provide a clear, educational answer based on the lesson content.
+        If the question is not related to the lesson, politely redirect them to ask questions about the lesson topic.
+        Keep your answer concise (2-3 paragraphs maximum).
+        Use markdown formatting where appropriate.
+        """
+
+        response = await client.chat.completions.create(
+            model=settings.LLM_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+        )
+
+        return response.choices[0].message.content.strip()

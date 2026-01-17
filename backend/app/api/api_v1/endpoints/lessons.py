@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 
 from app.api import deps
 from app.core.db import get_db
-from app.models.base import Lesson, Course, User
+from app.models.base import Lesson, Course, User, LessonQuestion
 from app.schemas import lesson as lesson_schema
 from app.services.llm_service import LLMService
 from app.services.pdf_service import PDFService
@@ -209,3 +209,82 @@ async def regenerate_lesson(
     )
 
     return lesson
+
+
+@router.post("/{lesson_id}/ask", response_model=lesson_schema.QuestionOut)
+async def ask_question(
+    lesson_id: int,
+    question_in: lesson_schema.QuestionCreate,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Ask a question about a lesson and get an LLM-generated answer.
+    """
+    # Get lesson and verify ownership
+    result = await db.execute(
+        select(Lesson)
+        .join(Course)
+        .where(Lesson.id == lesson_id, Course.user_id == current_user.id)
+    )
+    lesson = result.scalars().first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    # Get course for language
+    course_res = await db.execute(select(Course).where(Course.id == lesson.course_id))
+    course = course_res.scalars().first()
+
+    # Generate answer using LLM
+    try:
+        answer = await LLMService.answer_lesson_question(
+            lesson_title=lesson.title,
+            lesson_content=lesson.content_markdown,
+            question=question_in.question,
+            language=getattr(course, "language", "en"),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate answer: {str(e)}"
+        )
+
+    # Save question and answer to database
+    question_obj = LessonQuestion(
+        lesson_id=lesson_id,
+        question=question_in.question,
+        answer=answer,
+    )
+    db.add(question_obj)
+    await db.commit()
+    await db.refresh(question_obj)
+
+    return question_obj
+
+
+@router.get("/{lesson_id}/questions", response_model=list[lesson_schema.QuestionOut])
+async def get_lesson_questions(
+    lesson_id: int,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Get all questions and answers for a specific lesson.
+    """
+    # Verify lesson ownership
+    result = await db.execute(
+        select(Lesson)
+        .join(Course)
+        .where(Lesson.id == lesson_id, Course.user_id == current_user.id)
+    )
+    lesson = result.scalars().first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    # Get all questions for this lesson
+    questions_result = await db.execute(
+        select(LessonQuestion)
+        .where(LessonQuestion.lesson_id == lesson_id)
+        .order_by(LessonQuestion.created_at.desc())
+    )
+
+    return questions_result.scalars().all()

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap } from 'lucide-react';
+import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CourseView() {
@@ -21,6 +21,11 @@ export default function CourseView() {
   const [regenerating, setRegenerating] = useState(false);
   const [generatingAll, setGeneratingAll] = useState(false);
   const [generationStatus, setGenerationStatus] = useState(null);
+  
+  // Q&A State
+  const [questions, setQuestions] = useState([]);
+  const [newQuestion, setNewQuestion] = useState('');
+  const [askingQuestion, setAskingQuestion] = useState(false);
   
   // Get the base URL for media files
   const API_BASE_URL = client.defaults.baseURL.replace('/api/v1', '');
@@ -73,6 +78,9 @@ export default function CourseView() {
         [lesson.path]: res.data.is_completed ? 'completed' : 'generated'
       }));
       
+      // Fetch questions for this lesson
+      fetchQuestions(res.data.id);
+      
       // If PDF not ready yet, poll for it
       if (!res.data.pdf_path) {
         pollForPdf(res.data.id);
@@ -102,6 +110,34 @@ export default function CourseView() {
         clearInterval(interval);
       }
     }, 500);
+  };
+
+  const fetchQuestions = async (lessonId) => {
+    try {
+      const res = await client.get(`/lessons/${lessonId}/questions`);
+      setQuestions(res.data);
+    } catch (err) {
+      console.error('Failed to fetch questions:', err);
+      setQuestions([]);
+    }
+  };
+
+  const handleAskQuestion = async (e) => {
+    e.preventDefault();
+    if (!newQuestion.trim() || !currentLesson) return;
+    
+    setAskingQuestion(true);
+    try {
+      const res = await client.post(`/lessons/${currentLesson.id}/ask`, {
+        question: newQuestion
+      });
+      setQuestions([res.data, ...questions]);
+      setNewQuestion('');
+    } catch (err) {
+      alert('Failed to ask question. Please try again.');
+    } finally {
+      setAskingQuestion(false);
+    }
   };
 
   const handleUpdate = async () => {
@@ -292,6 +328,86 @@ export default function CourseView() {
                   )}
                 </div>
                 {successMsg && <span className="text-green-600 font-medium">{successMsg}</span>}
+              </div>
+            </section>
+            
+            {/* Q&A Section */}
+            <section className="mt-12 border-t pt-12">
+              <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                <MessageCircle className="w-6 h-6 text-primary" />
+                Ask the AI Assistant
+              </h3>
+              
+              <form onSubmit={handleAskQuestion} className="mb-8">
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    placeholder="Ask a question about this lesson..."
+                    value={newQuestion}
+                    onChange={(e) => setNewQuestion(e.target.value)}
+                    disabled={askingQuestion}
+                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition"
+                  />
+                  <button
+                    type="submit"
+                    disabled={askingQuestion || !newQuestion.trim()}
+                    className="px-6 py-3 bg-primary text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium transition"
+                  >
+                    {askingQuestion ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Asking...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5" />
+                        Ask
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+              
+              {/* Questions List */}
+              <div className="space-y-6">
+                {questions.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                    <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 font-medium">No questions yet</p>
+                    <p className="text-gray-400 text-sm mt-1">Be the first to ask something about this lesson!</p>
+                  </div>
+                ) : (
+                  questions.map((qa) => (
+                    <motion.div
+                      key={qa.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-200 shadow-sm"
+                    >
+                      <div className="mb-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-primary font-bold text-sm">Q</span>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-gray-800 font-medium">{qa.question}</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {new Date(qa.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 ml-0 mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                          <span className="text-green-600 font-bold text-sm">A</span>
+                        </div>
+                        <div className="flex-1 prose prose-sm max-w-none">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{qa.answer}</ReactMarkdown>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
               </div>
             </section>
           </motion.div>

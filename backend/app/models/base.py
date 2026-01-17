@@ -39,3 +39,14 @@ class Lesson(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     course = relationship("Course", backref="lessons")
+
+
+class LessonQuestion(Base):
+    __tablename__ = "lesson_questions"
+    id = Column(Integer, primary_key=True, index=True)
+    lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    lesson = relationship("Lesson", backref="questions")
