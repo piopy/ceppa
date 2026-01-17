@@ -39,5 +39,8 @@ class CourseList(BaseModel):
     id: int
     title: str
     created_at: datetime
+    total_lessons: int = 0
+    completed_lessons: int = 0
+    all_lessons_completed: bool = False
 
     model_config = {"from_attributes": True}

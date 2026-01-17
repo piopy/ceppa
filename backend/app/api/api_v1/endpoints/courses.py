@@ -59,7 +59,7 @@ async def read_courses(
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
-    Retrieve user's courses.
+    Retrieve user's courses with lesson completion stats.
     """
     result = await db.execute(
         select(Course)
@@ -68,7 +68,32 @@ async def read_courses(
         .limit(limit)
     )
     courses = result.scalars().all()
-    return courses
+
+    # Enrich courses with lesson completion stats
+    course_list = []
+    for course in courses:
+        # Count total and completed lessons
+        lessons_result = await db.execute(
+            select(Lesson).where(Lesson.course_id == course.id)
+        )
+        lessons = lessons_result.scalars().all()
+        total_lessons = len(lessons)
+        completed_lessons = sum(1 for lesson in lessons if lesson.is_completed)
+
+        course_list.append(
+            course_schema.CourseList(
+                id=course.id,
+                title=course.title,
+                created_at=course.created_at,
+                total_lessons=total_lessons,
+                completed_lessons=completed_lessons,
+                all_lessons_completed=(
+                    total_lessons > 0 and total_lessons == completed_lessons
+                ),
+            )
+        )
+
+    return course_list
 
 
 @router.get("/{course_id}/lessons", response_model=List[dict])

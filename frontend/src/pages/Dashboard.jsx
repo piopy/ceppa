@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import client from '../api/client';
-import { Plus, BookOpen, Clock, Loader2, Languages, Trash2, Pencil } from 'lucide-react';
+import { Plus, BookOpen, Clock, Loader2, Languages, Trash2, Pencil, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
@@ -160,13 +160,23 @@ export default function Dashboard() {
               >
                 <Link 
                   to={`/course/${course.id}`}
-                  className="block p-6 bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-primary/5 transition border border-gray-100"
+                  className={`block p-6 bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-primary/5 transition border-2 ${
+                    course.all_lessons_completed 
+                      ? 'border-green-500 shadow-green-100' 
+                      : 'border-gray-100'
+                  }`}
                 >
                   <h4 className="text-2xl font-bold mb-4 group-hover:text-primary transition pr-8">{course.title}</h4>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Clock className="w-4 h-4" />
                     <span>Started {new Date(course.created_at).toLocaleDateString()}</span>
                   </div>
+                  {course.all_lessons_completed && (
+                    <div className="mt-3 flex items-center gap-1 text-green-600 text-sm font-medium">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Completed</span>
+                    </div>
+                  )}
                 </Link>
                 <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 z-10">
                   <button
