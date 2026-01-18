@@ -46,14 +46,14 @@ function SortableCourseCard({ course, onDelete, onRename, deleting, renaming, id
     >
       <div 
         onClick={handleClick}
-        className={`block p-6 bg-white rounded-2xl shadow-sm hover:shadow-xl hover:shadow-primary/5 transition border-2 ${
+        className={`block p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-primary/5 transition border-2 ${
           course.all_lessons_completed 
             ? 'border-green-500 shadow-green-100' 
-            : 'border-gray-100'
+            : 'border-gray-100 dark:border-gray-700'
         } ${isDragging ? 'ring-4 ring-primary/30 border-primary' : ''}`}
       >
-        <h4 className="text-2xl font-bold mb-4 group-hover:text-primary transition pr-8">{course.title}</h4>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <h4 className="text-2xl font-bold mb-4 group-hover:text-primary transition pr-8 dark:text-gray-100">{course.title}</h4>
+        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <Clock className="w-4 h-4" />
           <span>Started {new Date(course.created_at).toLocaleDateString()}</span>
         </div>
@@ -268,8 +268,8 @@ export default function Dashboard() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <header className="mb-12">
-        <h2 className="text-4xl font-extrabold text-gray-900 mb-2">Welcome back!</h2>
-        <p className="text-gray-600">What do you want to learn today?</p>
+        <h2 className="text-4xl font-extrabold text-gray-900 dark:text-gray-100 mb-2">Welcome back!</h2>
+        <p className="text-gray-600 dark:text-gray-400">What do you want to learn today?</p>
       </header>
 
       {/* Creation Area */}
@@ -282,15 +282,15 @@ export default function Dashboard() {
               value={newTopic}
               onChange={e => setNewTopic(e.target.value)}
               disabled={creating}
-              className="flex-1 px-6 py-4 text-lg border-2 border-gray-200 rounded-2xl focus:border-primary focus:ring-4 focus:ring-primary/10 transition outline-none shadow-sm"
+              className="flex-1 px-6 py-4 text-lg border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-2xl focus:border-primary focus:ring-4 focus:ring-primary/10 transition outline-none shadow-sm"
             />
-            <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-2xl border-2 border-gray-200">
-              <Languages className="w-5 h-5 text-gray-600" />
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700">
+              <Languages className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               <select
                 value={language}
                 onChange={e => setLanguage(e.target.value)}
                 disabled={creating}
-                className="bg-transparent outline-none font-medium text-gray-700"
+                className="bg-transparent outline-none font-medium text-gray-700 dark:text-gray-300"
               >
                 <option value="it">🇮🇹 Italiano</option>
                 <option value="en">🇬🇧 English</option>
@@ -304,7 +304,7 @@ export default function Dashboard() {
                 value={customLanguage}
                 onChange={e => setCustomLanguage(e.target.value)}
                 disabled={creating}
-                className="px-4 py-4 text-sm border-2 border-gray-200 rounded-2xl focus:border-primary focus:ring-4 focus:ring-primary/10 transition outline-none shadow-sm w-32"
+                className="px-4 py-4 text-sm border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-2xl focus:border-primary focus:ring-4 focus:ring-primary/10 transition outline-none shadow-sm w-32"
               />
             )}
             <button 
@@ -321,7 +321,7 @@ export default function Dashboard() {
 
       {/* Course List */}
       <section>
-        <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+        <h3 className="text-xl font-bold mb-6 flex items-center gap-2 dark:text-gray-100">
           <BookOpen className="w-6 h-6 text-primary" />
           My Learning Paths
         </h3>
@@ -329,7 +329,7 @@ export default function Dashboard() {
         {loading ? (
           <div className="flex justify-center p-12"><Loader2 className="animate-spin w-12 h-12 text-gray-300" /></div>
         ) : courses.length === 0 ? (
-          <div className="text-center p-12 bg-gray-100 rounded-2xl border-2 border-dashed border-gray-300 text-gray-500">
+          <div className="text-center p-12 bg-gray-100 dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400">
             You haven't started any courses yet. Type a topic above to begin.
           </div>
         ) : (
@@ -364,15 +364,15 @@ export default function Dashboard() {
             <DragOverlay>
               {activeCourse ? (
                 <div 
-                  className={`p-6 bg-white rounded-2xl shadow-2xl border-2 border-primary ring-4 ring-primary/30 ${
+                  className={`p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border-2 border-primary ring-4 ring-primary/30 ${
                     activeCourse.all_lessons_completed 
                       ? 'border-green-500' 
                       : ''
                   }`}
                   style={{ width: '300px', cursor: 'grabbing' }}
                 >
-                  <h4 className="text-2xl font-bold mb-4 text-primary">{activeCourse.title}</h4>
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <h4 className="text-2xl font-bold mb-4 text-primary dark:text-gray-100">{activeCourse.title}</h4>
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                     <Clock className="w-4 h-4" />
                     <span>Started {new Date(activeCourse.created_at).toLocaleDateString()}</span>
                   </div>

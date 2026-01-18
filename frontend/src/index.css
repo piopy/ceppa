@@ -10,7 +10,7 @@
 
 .prose {
   max-width: 65ch;
-  color: #374151;
+  color: #374151; /* Scuro per light mode */
 }
 .prose h1 {
   @apply text-3xl font-bold text-gray-900 mb-4;
@@ -18,11 +18,38 @@
 .prose h2 {
   @apply text-2xl font-bold text-gray-900 mt-8 mb-4;
 }
+.prose h3 {
+  @apply text-xl font-bold text-gray-800 mt-6 mb-3;
+}
+.prose h4,
+.prose h5,
+.prose h6 {
+  @apply font-bold text-gray-800 mt-4 mb-2;
+}
+.prose strong {
+  @apply font-bold text-gray-900;
+}
+.prose a {
+  @apply text-indigo-600 hover:text-indigo-700 underline;
+}
+.prose code {
+  @apply bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm;
+}
 .prose p {
-  @apply mb-4 leading-relaxed;
+  @apply mb-4 leading-relaxed text-gray-700;
+}
+.prose ul,
+.prose ol {
+  @apply mb-4 pl-6 text-gray-700;
+}
+.prose li {
+  @apply mb-2;
+}
+.prose blockquote {
+  @apply border-l-4 border-gray-300 pl-4 italic text-gray-600 my-4;
 }
 .prose pre {
-  @apply bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4;
+  @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4 border border-gray-200;
 }
 
 .prose table {
@@ -35,9 +62,89 @@
 }
 
 .prose table thead th {
-  @apply bg-gray-100 font-bold text-left;
+  @apply bg-gray-100 font-bold text-left text-gray-900;
 }
 
 .prose table tbody tr:nth-child(even) {
   @apply bg-gray-50;
+}
+
+.prose ul > li::marker,
+.prose ol > li::marker {
+  color: #6b7280;
+}
+
+.prose hr {
+  @apply border-gray-200 my-8;
+}
+
+/* Dark mode styles */
+.dark .prose {
+  color: #e5e7eb;
+}
+
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4,
+.dark .prose h5,
+.dark .prose h6 {
+  color: #f3f4f6;
+}
+
+.dark .prose strong {
+  color: #f9fafb;
+}
+
+.dark .prose a {
+  color: #818cf8;
+}
+
+.dark .prose a:hover {
+  color: #a5b4fc;
+}
+
+.dark .prose code {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+
+.dark .prose p,
+.dark .prose ul,
+.dark .prose ol,
+.dark .prose li {
+  color: #d1d5db;
+}
+
+.dark .prose pre {
+  background-color: #030712;
+  border-color: #374151;
+}
+
+.dark .prose blockquote {
+  border-left-color: #4b5563;
+  color: #d1d5db;
+}
+
+.dark .prose hr {
+  border-color: #374151;
+}
+
+.dark .prose table th,
+.dark .prose table td {
+  border-color: #4b5563;
+}
+
+.dark .prose table thead th {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+
+.dark .prose table tbody tr:nth-child(even) {
+  background-color: #1f2937;
+}
+
+.dark .prose ul > li::marker,
+.dark .prose ol > li::marker {
+  color: #9ca3af;
 }

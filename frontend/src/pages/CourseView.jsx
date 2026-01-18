@@ -276,15 +276,15 @@ export default function CourseView() {
   if (loading) return <div className="p-10 text-center"><Loader2 className="animate-spin inline mr-2" />Loading course...</div>;
 
   return (
-    <div className="flex bg-white shadow-2xl rounded-l-3xl overflow-hidden h-full">
+    <div className="flex bg-white dark:bg-gray-900 shadow-2xl rounded-l-3xl overflow-hidden h-full">
       {/* Content Area - Left (Central) */}
-      <div className={`flex-1 overflow-y-auto bg-white transition-all duration-300 ${
+      <div className={`flex-1 overflow-y-auto bg-white dark:bg-gray-900 dark:text-gray-100 transition-all duration-300 ${
         isImmersiveMode ? 'py-8' : 'p-12'
       }`} style={isImmersiveMode ? { paddingLeft: '5%', paddingRight: '10%' } : {}}>
         {lessonLoading ? (
           <div className="h-full flex flex-col items-center justify-center space-y-4">
              <Loader2 className="w-16 h-16 text-primary animate-spin" />
-             <p className="text-xl font-medium text-gray-500">LLM is generating your deep lesson...</p>
+             <p className="text-xl font-medium text-gray-500 dark:text-gray-300">LLM is generating your deep lesson...</p>
           </div>
         ) : currentLesson ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`${
@@ -314,7 +314,7 @@ export default function CourseView() {
               </button>
               <button
                 onClick={() => setShowRegenerateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition"
               >
                 <RefreshCcw className="w-4 h-4" />
                 Regenerate Lesson
@@ -330,10 +330,10 @@ export default function CourseView() {
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{currentLesson.content_markdown}</ReactMarkdown>
             </div>
             
-            <hr className="my-12" />
+            <hr className="my-12 border-gray-200 dark:border-gray-700" />
             
-            <section className="bg-gray-50 p-8 rounded-2xl">
-              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <section className="bg-gray-50 dark:bg-gray-800 p-8 rounded-2xl">
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-gray-100">
                 <Send className="w-5 h-5 text-primary" />
                 Exercise Results & Notes
               </h3>
@@ -341,7 +341,7 @@ export default function CourseView() {
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
                 placeholder="Paste your code, output, or reflection here..."
-                className="w-full h-48 p-4 border rounded-xl focus:ring-2 focus:ring-primary outline-none transition"
+                className="w-full h-48 p-4 border dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary outline-none transition"
               />
               <div className="mt-6 flex items-center justify-between">
                 <div className="flex gap-4">
@@ -356,7 +356,7 @@ export default function CourseView() {
                     <>
                       <button
                         onClick={() => window.open(`${MEDIA_URL}/${currentLesson.pdf_path}`, '_blank')}
-                        className="flex items-center gap-2 px-6 py-3 bg-indigo-100 text-indigo-700 rounded-xl font-bold hover:bg-indigo-200 transition"
+                        className="flex items-center gap-2 px-6 py-3 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-800 transition"
                       >
                         <FileText className="w-5 h-5" />
                         View PDF
@@ -364,7 +364,7 @@ export default function CourseView() {
                       <a 
                         href={`${MEDIA_URL}/${currentLesson.pdf_path}`} 
                         download
-                        className="flex items-center gap-2 px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition"
+                        className="flex items-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition"
                       >
                         <Download className="w-5 h-5" />
                         Download PDF
@@ -377,8 +377,8 @@ export default function CourseView() {
             </section>
             
             {/* Q&A Section */}
-            <section className="mt-12 border-t pt-12">
-              <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
+            <section className="mt-12 border-t dark:border-gray-700 pt-12">
+              <h3 className="text-2xl font-bold mb-6 flex items-center gap-2 text-gray-900 dark:text-gray-100">
                 <MessageCircle className="w-6 h-6 text-primary" />
                 Ask the AI Assistant
               </h3>
@@ -391,7 +391,7 @@ export default function CourseView() {
                     value={newQuestion}
                     onChange={(e) => setNewQuestion(e.target.value)}
                     disabled={askingQuestion}
-                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition"
+                    className="flex-1 px-4 py-3 border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition"
                   />
                   <button
                     type="submit"
@@ -416,10 +416,10 @@ export default function CourseView() {
               {/* Questions List */}
               <div className="space-y-6">
                 {questions.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                    <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 font-medium">No questions yet</p>
-                    <p className="text-gray-400 text-sm mt-1">Be the first to ask something about this lesson!</p>
+                  <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                    <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-500 dark:text-gray-400 font-medium">No questions yet</p>
+                    <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Be the first to ask something about this lesson!</p>
                   </div>
                 ) : (
                   questions.map((qa) => (
@@ -427,7 +427,7 @@ export default function CourseView() {
                       key={qa.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-200 shadow-sm"
+                      className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm"
                     >
                       <div className="mb-4">
                         <div className="flex items-start gap-3">
@@ -435,14 +435,14 @@ export default function CourseView() {
                             <span className="text-primary font-bold text-sm">Q</span>
                           </div>
                           <div className="flex-1">
-                            <p className="text-gray-800 font-medium">{qa.question}</p>
-                            <p className="text-xs text-gray-400 mt-1">
+                            <p className="text-gray-800 dark:text-gray-200 font-medium">{qa.question}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                               {new Date(qa.created_at).toLocaleString()}
                             </p>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-start gap-3 ml-0 mt-4 pt-4 border-t border-gray-200">
+                      <div className="flex items-start gap-3 ml-0 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
                           <span className="text-green-600 font-bold text-sm">A</span>
                         </div>
@@ -459,7 +459,7 @@ export default function CourseView() {
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-gray-400">
             <BookOpen className="w-24 h-24 mb-4 opacity-10" />
-            <p className="text-xl font-medium">Select a lesson from the index to start learning.</p>
+            <p className="text-xl font-medium text-gray-500 dark:text-gray-300">Select a lesson from the index to start learning.</p>
           </div>
         )}
       </div>
@@ -472,25 +472,25 @@ export default function CourseView() {
             setShowRightSidebar(!showRightSidebar);
             if (isImmersiveMode) setIsImmersiveMode(false);
           }}
-          className={`fixed right-0 top-1/2 -translate-y-1/2 z-30 bg-gray-100 hover:bg-gray-200 p-2 rounded-l-lg border border-gray-200 transition shadow-md ${
+          className={`fixed right-0 top-1/2 -translate-y-1/2 z-30 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-l-lg border border-gray-200 dark:border-gray-700 transition shadow-md ${
             showRightSidebar ? '' : 'translate-x-0'
           }`}
           style={{ right: showRightSidebar ? '320px' : '0' }}
           title={showRightSidebar ? 'Hide Index' : 'Show Index'}
         >
           {showRightSidebar ? (
-            <ChevronRight className="w-4 h-4 text-gray-600" />
+            <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-300" />
           ) : (
-            <ChevronLeft className="w-4 h-4 text-gray-600" />
+            <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-300" />
           )}
         </button>
         
-        <div className={`border-l border-gray-100 bg-gray-50 h-full overflow-y-auto transition-all duration-300 ${
+        <div className={`border-l border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 h-full overflow-y-auto transition-all duration-300 ${
           showRightSidebar ? 'w-80 opacity-100' : 'w-0 opacity-0'
         }`}>
-        <div className="p-6 border-b border-gray-100 sticky top-0 bg-gray-50 z-10">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-gray-50 dark:bg-gray-900 z-10">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Course Curriculum</h2>
+            <h2 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Course Curriculum</h2>
             <button
               onClick={handleGenerateAll}
               disabled={generatingAll}
@@ -514,14 +514,14 @@ export default function CourseView() {
               )}
             </button>
           </div>
-          <h3 className="text-lg font-extrabold mt-1">{course.title}</h3>
+          <h3 className="text-lg font-extrabold mt-1 dark:text-gray-100">{course.title}</h3>
           
           {/* Generation Status */}
           {generationStatus && generationStatus.in_progress && (
-            <div className="mt-3 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+            <div className="mt-3 p-3 bg-indigo-50 dark:bg-indigo-950 rounded-lg border border-indigo-200 dark:border-indigo-800">
               <div className="flex items-center justify-between text-xs mb-2">
-                <span className="font-semibold text-indigo-900">Generazione in corso...</span>
-                <span className="text-indigo-700 font-bold">
+                <span className="font-semibold text-indigo-900 dark:text-indigo-300">Generazione in corso...</span>
+                <span className="text-indigo-700 dark:text-indigo-400 font-bold">
                   {generationStatus.completed} / {generationStatus.total}
                 </span>
               </div>
@@ -541,17 +541,17 @@ export default function CourseView() {
           
           {/* Progress Bar */}
           <div className="mt-4">
-            <div className="flex justify-between text-xs text-gray-600 mb-1">
+            <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
               <span>Progress</span>
               <span className="font-semibold">
-                <span className="text-green-600">{getCompletedCount()}</span>
-                <span className="text-gray-400 mx-1">/</span>
-                <span className="text-blue-600">{getGeneratedCount()}</span>
-                <span className="text-gray-400 mx-1">/</span>
+                <span className="text-green-600 dark:text-green-400">{getCompletedCount()}</span>
+                <span className="text-gray-400 dark:text-gray-500 mx-1">/</span>
+                <span className="text-blue-600 dark:text-blue-400">{getGeneratedCount()}</span>
+                <span className="text-gray-400 dark:text-gray-500 mx-1">/</span>
                 <span>{getTotalLessons()}</span>
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5 relative overflow-hidden">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 relative overflow-hidden">
               {/* Blue bar for generated lessons */}
               <div 
                 className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-500"
@@ -569,8 +569,8 @@ export default function CourseView() {
         <div className="p-2">
           {index.map((module, mIdx) => (
             <div key={mIdx} className="mb-4">
-              <div className="px-4 py-2 font-bold text-gray-800 flex items-center gap-2">
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+              <div className="px-4 py-2 font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                 {module.title}
               </div>
               <div className="space-y-1">
@@ -580,7 +580,7 @@ export default function CourseView() {
                     <button
                       key={lIdx}
                       onClick={() => selectLesson(lesson)}
-                      className={`w-full text-left px-4 py-2 pl-10 text-sm transition flex items-center gap-2 group overflow-hidden ${currentLesson?.path_in_index === lesson.path ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-100 text-gray-600'}`}
+                      className={`w-full text-left px-4 py-2 pl-10 text-sm transition flex items-center gap-2 group overflow-hidden ${currentLesson?.path_in_index === lesson.path ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
                     >
                       {/* Status Badge */}
                       <div className="flex-shrink-0">
@@ -589,7 +589,7 @@ export default function CourseView() {
                         ) : status === 'generated' ? (
                           <div className="w-2 h-2 rounded-full bg-blue-500" title="Generated" />
                         ) : (
-                          <div className="w-2 h-2 rounded-full bg-gray-300" title="Not generated" />
+                          <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" title="Not generated" />
                         )}
                       </div>
                       
@@ -601,7 +601,7 @@ export default function CourseView() {
                         {currentLesson?.path_in_index === lesson.path ? (
                           <ChevronRight className="w-4 h-4" />
                         ) : (
-                          <div className="w-1.5 h-1.5 rounded-full bg-gray-200 group-hover:bg-primary transition" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 group-hover:bg-primary transition" />
                         )}
                       </span>
                     </button>
@@ -613,7 +613,7 @@ export default function CourseView() {
         </div>
         
         {/* Download Full PDF Button - Always visible */}
-        <div className="p-4 border-t border-gray-200 mt-4 space-y-3">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 mt-4 space-y-3">
           {/* PDF Download Button */}
           <button
             onClick={async () => {
@@ -642,7 +642,7 @@ export default function CourseView() {
             className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition shadow-lg ${
               areAllLessonsGenerated() 
                 ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:shadow-xl cursor-pointer' 
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
             }`}
             title={areAllLessonsGenerated() ? 'Download complete course as single PDF' : `${getTotalLessons() - getGeneratedCount()} lesson(s) still need to be generated`}
           >
@@ -678,7 +678,7 @@ export default function CourseView() {
             className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition shadow-lg ${
               areAllLessonsGenerated() 
                 ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 hover:shadow-xl cursor-pointer' 
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
             }`}
             title={areAllLessonsGenerated() ? 'Download complete course as single EPUB' : `${getTotalLessons() - getGeneratedCount()} lesson(s) still need to be generated`}
           >
@@ -695,17 +695,17 @@ export default function CourseView() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8"
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full p-8"
           >
-            <h3 className="text-2xl font-bold mb-4 text-gray-900">Regenerate Lesson</h3>
-            <p className="text-gray-600 mb-6">
+            <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Regenerate Lesson</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Please describe what you'd like to improve or change in this lesson. The AI will regenerate the content based on your feedback.
             </p>
             <textarea
               value={regenerateFeedback}
               onChange={e => setRegenerateFeedback(e.target.value)}
               placeholder="e.g., Add more practical examples, simplify the explanations, include more code snippets..."
-              className="w-full h-40 p-4 border-2 border-gray-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition resize-none"
+              className="w-full h-40 p-4 border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition resize-none"
               disabled={regenerating}
             />
             <div className="flex gap-4 mt-6 justify-end">
@@ -715,7 +715,7 @@ export default function CourseView() {
                   setRegenerateFeedback('');
                 }}
                 disabled={regenerating}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition disabled:opacity-50"
+                className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition disabled:opacity-50"
               >
                 Annulla
               </button>
