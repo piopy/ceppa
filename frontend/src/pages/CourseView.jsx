@@ -278,16 +278,18 @@ export default function CourseView() {
   return (
     <div className="flex bg-white shadow-2xl rounded-l-3xl overflow-hidden h-full">
       {/* Content Area - Left (Central) */}
-      <div className={`flex-1 overflow-y-auto p-12 bg-white transition-all duration-300 ${
-        !showRightSidebar ? 'mx-auto max-w-5xl' : ''
-      }`}>
+      <div className={`flex-1 overflow-y-auto bg-white transition-all duration-300 ${
+        isImmersiveMode ? 'py-8' : 'p-12'
+      }`} style={isImmersiveMode ? { paddingLeft: '5%', paddingRight: '10%' } : {}}>
         {lessonLoading ? (
           <div className="h-full flex flex-col items-center justify-center space-y-4">
              <Loader2 className="w-16 h-16 text-primary animate-spin" />
              <p className="text-xl font-medium text-gray-500">LLM is generating your deep lesson...</p>
           </div>
         ) : currentLesson ? (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`${
+            isImmersiveMode ? 'w-full' : 'max-w-4xl mx-auto'
+          }`}>
             {/* Regenerate Button + Immersive Reader */}
             <div className="flex justify-end mb-4 gap-3">
               <button
@@ -319,7 +321,12 @@ export default function CourseView() {
               </button>
             </div>
             
-            <div className="prose prose-indigo max-w-none text-justify">
+            <div 
+              className={`prose prose-indigo text-justify transition-all duration-300 ${
+                isImmersiveMode ? 'prose-lg' : ''
+              }`}
+              style={isImmersiveMode ? { maxWidth: 'none' } : {}}
+            >
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{currentLesson.content_markdown}</ReactMarkdown>
             </div>
             

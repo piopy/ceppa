@@ -35,14 +35,14 @@ export default function Layout() {
       {/* Toggle Button for Sidebar */}
       <button
         onClick={() => setShowSidebar(!showSidebar)}
-        className="fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-secondary hover:bg-secondary/90 p-2 rounded-r-lg border border-l-0 border-white/20 transition shadow-md"
+        className="fixed left-0 top-1/2 -translate-y-1/2 z-30 bg-gray-100 hover:bg-gray-200 p-2 rounded-r-lg border border-gray-200 transition shadow-md"
         style={{ left: showSidebar ? '256px' : '0' }}
         title={showSidebar ? 'Hide Sidebar' : 'Show Sidebar'}
       >
         {showSidebar ? (
-          <ChevronLeft className="w-4 h-4 text-white" />
+          <ChevronLeft className="w-4 h-4 text-gray-600" />
         ) : (
-          <ChevronRight className="w-4 h-4 text-white" />
+          <ChevronRight className="w-4 h-4 text-gray-600" />
         )}
       </button>
       
