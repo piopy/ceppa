@@ -613,7 +613,8 @@ export default function CourseView() {
         </div>
         
         {/* Download Full PDF Button - Always visible */}
-        <div className="p-4 border-t border-gray-200 mt-4">
+        <div className="p-4 border-t border-gray-200 mt-4 space-y-3">
+          {/* PDF Download Button */}
           <button
             onClick={async () => {
               if (!areAllLessonsGenerated()) return;
@@ -627,7 +628,7 @@ export default function CourseView() {
                 const url = window.URL.createObjectURL(new Blob([response.data]));
                 const link = document.createElement('a');
                 link.href = url;
-                link.setAttribute('download', `${course.title}_complete.pdf`);
+                link.setAttribute('download', `${course.title}.pdf`);
                 document.body.appendChild(link);
                 link.click();
                 link.parentNode.removeChild(link);
@@ -645,8 +646,44 @@ export default function CourseView() {
             }`}
             title={areAllLessonsGenerated() ? 'Download complete course as single PDF' : `${getTotalLessons() - getGeneratedCount()} lesson(s) still need to be generated`}
           >
-            <DownloadCloud className="w-5 h-5" />
+            <Download className="w-5 h-5" />
             {areAllLessonsGenerated() ? 'Download Complete Course PDF' : `Waiting for ${getTotalLessons() - getGeneratedCount()} lesson(s)...`}
+          </button>
+          
+          {/* EPUB Download Button */}
+          <button
+            onClick={async () => {
+              if (!areAllLessonsGenerated()) return;
+              
+              try {
+                const response = await client.get(`/courses/${courseId}/download-full-epub`, {
+                  responseType: 'blob'
+                });
+                
+                // Create download link
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `${course.title}.epub`);
+                document.body.appendChild(link);
+                link.click();
+                link.parentNode.removeChild(link);
+                window.URL.revokeObjectURL(url);
+              } catch (err) {
+                console.error('Download failed:', err);
+                alert('Failed to download full course EPUB. Make sure all lessons are generated.');
+              }
+            }}
+            disabled={!areAllLessonsGenerated()}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition shadow-lg ${
+              areAllLessonsGenerated() 
+                ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 hover:shadow-xl cursor-pointer' 
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+            title={areAllLessonsGenerated() ? 'Download complete course as single EPUB' : `${getTotalLessons() - getGeneratedCount()} lesson(s) still need to be generated`}
+          >
+            <BookOpen className="w-5 h-5" />
+            {areAllLessonsGenerated() ? 'Download Complete Course EPUB' : `Waiting for ${getTotalLessons() - getGeneratedCount()} lesson(s)...`}
           </button>
         </div>
         </div>

@@ -545,5 +545,116 @@ async def download_full_course_pdf(
         filename=f"{safe_course_title}.pdf",
     )
 
+
+@router.get("/{course_id}/download-full-epub")
+async def download_full_course_epub(
+    course_id: int,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Download a single EPUB containing all lessons merged together.
+    Only available when all lessons are generated.
+    """
+    # Get course
+    result = await db.execute(
+        select(Course).where(Course.id == course_id, Course.user_id == current_user.id)
+    )
+    course = result.scalar_one_or_none()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    # Get all lessons for this course
+    lessons_result = await db.execute(
+        select(Lesson)
+        .where(Lesson.course_id == course_id)
+        .order_by(Lesson.path_in_index)
+    )
+    lessons = lessons_result.scalars().all()
+
+    # Check if all lessons are generated (have content)
+    if not lessons:
+        raise HTTPException(status_code=400, detail="No lessons found for this course")
+
+    # Check if lessons have been generated (pdf_path or content_markdown exists)
+    not_generated = [l for l in lessons if not l.pdf_path and not l.content_markdown]
+    if not_generated:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{len(not_generated)} lesson(s) not yet generated. All lessons must be generated before downloading full EPUB.",
+        )
+
+    # Sort lessons naturally by path_in_index
+    sorted_lessons = sorted(lessons, key=lambda l: natural_sort_key(l.path_in_index))
+
+    # Build merged markdown with page breaks
+    merged_md_parts = [
+        f"# {course.title}\n\n",
+        f"**Course Description:** {course.description}\n\n",
+        "\n\n",
+        "# Table of Contents\n\n",
+    ]
+
+    # Add TOC
+    for lesson in sorted_lessons:
+        merged_md_parts.append(f"- {lesson.path_in_index}. {lesson.title}\n")
+
+    merged_md_parts.append("\n\n")
+
+    # Add all lesson contents
+    for lesson in sorted_lessons:
+        merged_md_parts.append(f"# {lesson.path_in_index}. {lesson.title}\n\n")
+
+        # Sanitize markdown content to avoid Pandoc errors
+        content = lesson.content_markdown
+        if content:
+            import re
+
+            # Replace smart quotes with regular quotes
+            content = content.replace("\u2018", "'").replace("\u2019", "'")
+            content = content.replace("\u201c", '"').replace("\u201d", '"')
+            content = content.replace("\u2013", "-").replace("\u2014", "--")
+
+            # Remove Pandoc attributes and custom syntax
+            # Remove {.class}, {#id}, {key=value} patterns
+            content = re.sub(r"\{[\. #]?[^\}]+\}", "", content)
+
+            # Escape problematic patterns that Pandoc might interpret as metadata
+            # Replace standalone --- with a safe alternative
+            content = re.sub(r"^---$", "___", content, flags=re.MULTILINE)
+
+            # Fix italic Nota patterns that might confuse Pandoc
+            # Replace *Nota * patterns with **Nota ** (bold instead of italic)
+            content = re.sub(r"\*Nota([^*]+)\*", r"**Nota\1**", content)
+
+            merged_md_parts.append(content)
+
+        merged_md_parts.append("\n\n")
+
+    merged_md = "".join(merged_md_parts)
+
+    # Generate EPUB with pdf_service
+    safe_course_title = PDFService._sanitize_filename(course.title)
+    epub_path = await PDFService.convert_markdown_to_epub(
+        merged_md, current_user.id, course.title, safe_course_title
+    )
+
+    if not epub_path:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate merged EPUB. Check backend logs.",
+        )
+
+    # Return file
+    full_path = PDFService.BASE_DIR / epub_path
+    if not full_path.exists():
+        raise HTTPException(status_code=404, detail="Generated EPUB file not found")
+
+    return FileResponse(
+        path=str(full_path),
+        media_type="application/epub+zip",
+        filename=f"{safe_course_title}.epub",
+    )
+
     # Mark as complete
     generation_status[status_key]["in_progress"] = False
