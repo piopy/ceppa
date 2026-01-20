@@ -78,6 +78,16 @@
   @apply border-gray-200 my-8;
 }
 
+.prose pre {
+  background-color: rgb(243, 243, 243);
+  border-color: #374151;
+}
+.prose code {
+  background-color: rgb(243, 243, 243);
+  color: #084e37;
+}
+
+
 /* Dark mode styles */
 .dark .prose {
   color: #e5e7eb;
@@ -117,7 +127,8 @@
 }
 
 .dark .prose pre {
-  background-color: #030712;
+  /* background-color: #030712; */
+  background-color: #374151;
   border-color: #374151;
 }
 
@@ -147,4 +158,8 @@
 .dark .prose ul > li::marker,
 .dark .prose ol > li::marker {
   color: #9ca3af;
+}
+
+.dark option {
+    background-color: #1f2937;
 }
