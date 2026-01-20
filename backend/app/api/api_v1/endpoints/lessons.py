@@ -288,3 +288,42 @@ async def get_lesson_questions(
     )
 
     return questions_result.scalars().all()
+
+
+@router.delete("/{lesson_id}/questions/{question_id}")
+async def delete_question(
+    lesson_id: int,
+    question_id: int,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Delete a question from a lesson.
+    Users can only delete questions from lessons they own.
+    """
+    # Verify lesson ownership
+    result = await db.execute(
+        select(Lesson)
+        .join(Course)
+        .where(Lesson.id == lesson_id, Course.user_id == current_user.id)
+    )
+    lesson = result.scalars().first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    # Get the question
+    question_result = await db.execute(
+        select(LessonQuestion).where(
+            LessonQuestion.id == question_id,
+            LessonQuestion.lesson_id == lesson_id,
+        )
+    )
+    question = question_result.scalars().first()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+
+    # Delete the question
+    await db.delete(question)
+    await db.commit()
+
+    return {"message": "Question deleted successfully"}

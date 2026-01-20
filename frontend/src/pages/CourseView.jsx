@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle, Maximize2, ChevronLeft, DownloadCloud } from 'lucide-react';
+import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle, Maximize2, ChevronLeft, DownloadCloud, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CourseView() {
@@ -26,6 +26,7 @@ export default function CourseView() {
   const [questions, setQuestions] = useState([]);
   const [newQuestion, setNewQuestion] = useState('');
   const [askingQuestion, setAskingQuestion] = useState(false);
+  const [deletingQuestion, setDeletingQuestion] = useState(null);
   
   // Immersive Mode & Sidebar Visibility
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
@@ -141,6 +142,20 @@ export default function CourseView() {
       alert('Failed to ask question. Please try again.');
     } finally {
       setAskingQuestion(false);
+    }
+  };
+
+  const handleDeleteQuestion = async (questionId) => {
+    if (!window.confirm('Sei sicuro di voler eliminare questa domanda?')) return;
+    
+    setDeletingQuestion(questionId);
+    try {
+      await client.delete(`/lessons/${currentLesson.id}/questions/${questionId}`);
+      setQuestions(questions.filter(q => q.id !== questionId));
+    } catch (err) {
+      alert('Failed to delete question. Please try again.');
+    } finally {
+      setDeletingQuestion(null);
     }
   };
 
@@ -427,14 +442,28 @@ export default function CourseView() {
                       key={qa.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm"
+                      className="relative group bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm"
                     >
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => handleDeleteQuestion(qa.id)}
+                        disabled={deletingQuestion === qa.id}
+                        className="absolute top-4 right-4 p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50 opacity-0 group-hover:opacity-100"
+                        title="Elimina domanda"
+                      >
+                        {deletingQuestion === qa.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                      
                       <div className="mb-4">
                         <div className="flex items-start gap-3">
                           <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                             <span className="text-primary font-bold text-sm">Q</span>
                           </div>
-                          <div className="flex-1">
+                          <div className="flex-1 pr-8">
                             <p className="text-gray-800 dark:text-gray-200 font-medium">{qa.question}</p>
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                               {new Date(qa.created_at).toLocaleString()}
