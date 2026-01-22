@@ -506,8 +506,13 @@ async def download_full_course_pdf(
             content = content.replace("\u2013", "-").replace("\u2014", "--")
 
             # Remove Pandoc attributes and custom syntax
-            # Remove {.class}, {#id}, {key=value} patterns
-            content = re.sub(r"\{[\.#]?[^\}]+\}", "", content)
+            # Remove {.class}, {#id}, {key=value} patterns but preserve Jinja {{ }} syntax
+            # Only match single braces with Pandoc-specific prefixes: . # or key=value
+            content = re.sub(
+                r"\{(?:\.[a-zA-Z0-9_-]+|#[a-zA-Z0-9_-]+|[a-zA-Z_][a-zA-Z0-9_-]*=[^}]+)\}",
+                "",
+                content,
+            )
 
             # Escape problematic patterns that Pandoc might interpret as metadata
             # Replace standalone --- with a safe alternative
