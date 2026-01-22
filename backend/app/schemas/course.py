@@ -17,6 +17,9 @@ class CourseCreate(BaseModel):
     topic: str
     custom_instructions: Optional[str] = None
     language: Optional[str] = None  # "en" or "it"
+    use_web_research: Optional[bool] = (
+        False  # Enable Tavily web search for course index
+    )
 
 
 class CourseUpdate(BaseModel):
@@ -48,3 +51,7 @@ class CourseList(BaseModel):
 
 class CourseReorder(BaseModel):
     course_order: List[int]
+
+
+class GenerateAllLessonsRequest(BaseModel):
+    use_web_research: Optional[bool] = False

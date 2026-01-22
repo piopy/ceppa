@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import client from '../api/client';
-import { Plus, BookOpen, Clock, Loader2, Languages, Trash2, Pencil, CheckCircle2, GripVertical } from 'lucide-react';
+import { Plus, BookOpen, Clock, Loader2, Languages, Trash2, Pencil, CheckCircle2, GripVertical, Globe } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
@@ -113,6 +113,8 @@ export default function Dashboard() {
   const [newTopic, setNewTopic] = useState('');
   const [language, setLanguage] = useState('it');
   const [customLanguage, setCustomLanguage] = useState('');
+  const [useWebResearch, setUseWebResearch] = useState(false);
+  const [tavilyCredits, setTavilyCredits] = useState(null);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [renaming, setRenaming] = useState(null);
@@ -121,6 +123,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchCourses();
+    fetchTavilyCredits();
   }, []);
 
   const fetchCourses = async () => {
@@ -134,15 +137,34 @@ export default function Dashboard() {
     }
   };
 
+  const fetchTavilyCredits = async () => {
+    try {
+      const res = await client.get('/tavily/credits');
+      setTavilyCredits(res.data);
+    } catch (err) {
+      console.error('Failed to fetch Tavily credits:', err);
+      setTavilyCredits(null);
+    }
+  };
+
   const handleCreateCourse = async (e) => {
     e.preventDefault();
     if (!newTopic) return;
     setCreating(true);
     try {
       const selectedLanguage = language === 'custom' ? customLanguage : language;
-      await client.post('/courses/', { topic: newTopic, language: selectedLanguage });
+      await client.post('/courses/', { 
+        topic: newTopic, 
+        language: selectedLanguage,
+        use_web_research: useWebResearch 
+      });
       setNewTopic('');
+      setUseWebResearch(false); // Reset toggle after creation
       fetchCourses();
+      // Refresh Tavily credits if web research was used
+      if (useWebResearch) {
+        fetchTavilyCredits();
+      }
     } catch (err) {
       alert('Generation failed. Check your API key/Backend.');
     } finally {
@@ -315,6 +337,37 @@ export default function Dashboard() {
               {creating ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6" />}
               {creating ? 'Generating Index...' : 'Learn Now'}
             </button>
+          </div>
+          
+          {/* Web Research Toggle */}
+          <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border-2 border-blue-100 dark:border-blue-800">
+            <label className="flex items-center gap-3 cursor-pointer flex-1">
+              <input
+                type="checkbox"
+                checked={useWebResearch}
+                onChange={(e) => setUseWebResearch(e.target.checked)}
+                disabled={creating}
+                className="w-5 h-5 rounded border-2 border-blue-300 dark:border-blue-600 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer disabled:opacity-50"
+              />
+              <Globe className={`w-5 h-5 ${useWebResearch ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'} transition`} />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Enrich with web research
+                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                  (uses 1 Tavily credit
+                  {tavilyCredits && tavilyCredits.enabled && tavilyCredits.remaining !== undefined && (
+                    <> - <span className={`font-semibold ${tavilyCredits.remaining < 100 ? 'text-orange-600 dark:text-orange-400' : ''}`}>
+                      {tavilyCredits.remaining} credits remaining
+                    </span></>
+                  )}
+                  )
+                </span>
+              </span>
+            </label>
+            {useWebResearch && (
+              <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-full font-medium">
+                Active
+              </span>
+            )}
           </div>
         </form>
       </section>
