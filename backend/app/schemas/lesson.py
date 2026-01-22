@@ -26,3 +26,16 @@ class LessonOut(BaseModel):
 class LessonUpdate(BaseModel):
     is_completed: Optional[bool] = None
     user_notes: Optional[str] = None
+
+
+class QuestionCreate(BaseModel):
+    question: str
+
+
+class QuestionOut(BaseModel):
+    id: int
+    question: str
+    answer: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

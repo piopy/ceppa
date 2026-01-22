@@ -101,3 +101,47 @@ class PDFService:
         return (
             f"{user_id}/{PDFService._sanitize_filename(course_title)}/{safe_lesson}.pdf"
         )
+
+    @staticmethod
+    async def convert_markdown_to_epub(
+        content_md: str, user_id: int, course_title: str, lesson_title: str
+    ) -> str:
+        """
+        Converts markdown content to EPUB and saves it. Returns relative path to the file.
+        """
+        safe_lesson = PDFService._sanitize_filename(lesson_title)
+        dir_path = PDFService.ensure_user_directory(user_id, course_title)
+
+        md_file = dir_path / f"{safe_lesson}.md"
+        epub_file = dir_path / f"{safe_lesson}.epub"
+
+        # Save MD
+        with open(md_file, "w", encoding="utf-8") as f:
+            f.write(content_md)
+
+        # Run Pandoc to generate EPUB
+        try:
+            result = subprocess.run(
+                [
+                    "pandoc",
+                    str(md_file),
+                    "-o",
+                    str(epub_file),
+                    "--toc",
+                    "--toc-depth=3",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=120,  # 2 minute timeout
+            )
+        except subprocess.CalledProcessError as e:
+            error_msg = f"Pandoc EPUB Error (exit {e.returncode}): {e.stderr}"
+            print(error_msg)
+            return None
+        except subprocess.TimeoutExpired:
+            print(f"Pandoc EPUB timeout for: {lesson_title}")
+            return None
+
+        # Return relative path for DB/Serving
+        return f"{user_id}/{PDFService._sanitize_filename(course_title)}/{safe_lesson}.epub"

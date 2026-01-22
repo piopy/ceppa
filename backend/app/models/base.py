@@ -19,6 +19,7 @@ class Course(Base):
     description = Column(Text)
     index_json = Column(Text)  # Storing the JSON tree of the course index
     language = Column(String, default="en")  # "en" or "it"
+    position = Column(Integer, nullable=True, default=0)  # For drag & drop ordering
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     user = relationship("User", backref="courses")
@@ -39,3 +40,14 @@ class Lesson(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     course = relationship("Course", backref="lessons")
+
+
+class LessonQuestion(Base):
+    __tablename__ = "lesson_questions"
+    id = Column(Integer, primary_key=True, index=True)
+    lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    lesson = relationship("Lesson", backref="questions")
