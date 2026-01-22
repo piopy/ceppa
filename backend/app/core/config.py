@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     DEFAULT_LANGUAGE: str = "en"  # en or it
     MAX_CONCURRENT_WORKERS: int = 3
 
+    # Tavily Web Search
+    TAVILY_API_KEY: Optional[str] = None
+    TAVILY_ENABLED: bool = False
+    TAVILY_CREDIT_THRESHOLD: int = 10  # Stop using Tavily if credits below this
+
     class Config:
         case_sensitive = True
         env_file = ".env"

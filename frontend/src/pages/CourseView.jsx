@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle, Maximize2, ChevronLeft, DownloadCloud, Trash2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle, Maximize2, ChevronLeft, DownloadCloud, Trash2, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CourseView() {
@@ -31,6 +31,9 @@ export default function CourseView() {
   // Immersive Mode & Sidebar Visibility
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
+  
+  // Web Research Toggle for lesson generation
+  const [useWebResearch, setUseWebResearch] = useState(false);
   
   // Get the base URL for media files
   const API_BASE_URL = client.defaults.baseURL.replace('/api/v1', '');
@@ -241,7 +244,9 @@ export default function CourseView() {
     setGenerationStatus({ total: 0, completed: 0, failed: 0, in_progress: true });
     
     try {
-      const res = await client.post(`/courses/${courseId}/generate-all-lessons`);
+      const res = await client.post(`/courses/${courseId}/generate-all-lessons`, {
+        use_web_research: useWebResearch
+      });
       
       if (res.data.to_generate === 0) {
         alert('Tutte le lezioni sono già state generate!');
@@ -544,6 +549,28 @@ export default function CourseView() {
             </button>
           </div>
           <h3 className="text-lg font-extrabold mt-1 dark:text-gray-100">{course.title}</h3>
+          
+          {/* Web Research Toggle */}
+          <div className="mt-3 flex items-center gap-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-100 dark:border-blue-800">
+            <label className="flex items-center gap-2 cursor-pointer flex-1">
+              <input
+                type="checkbox"
+                checked={useWebResearch}
+                onChange={(e) => setUseWebResearch(e.target.checked)}
+                disabled={generatingAll}
+                className="w-4 h-4 rounded border-2 border-blue-300 dark:border-blue-600 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer disabled:opacity-50"
+              />
+              <Globe className={`w-4 h-4 ${useWebResearch ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'} transition`} />
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                Use web research to generate lessons
+              </span>
+            </label>
+            {useWebResearch && (
+              <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-full font-medium">
+                Active
+              </span>
+            )}
+          </div>
           
           {/* Generation Status */}
           {generationStatus && generationStatus.in_progress && (

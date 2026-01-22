@@ -31,8 +31,12 @@ async def create_course(
     # 1. Generate Index via LLM
     try:
         language = course_in.language or "en"
+        use_web_research = course_in.use_web_research or False
         index_json_str = await LLMService.generate_course_index(
-            course_in.topic, course_in.custom_instructions, language
+            course_in.topic,
+            course_in.custom_instructions,
+            language,
+            use_web_research=use_web_research,
         )
         # Validate JSON
         json.loads(index_json_str)
@@ -245,6 +249,7 @@ generation_status = {}
 @router.post("/{course_id}/generate-all-lessons")
 async def generate_all_lessons(
     course_id: int,
+    request: course_schema.GenerateAllLessonsRequest,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(deps.get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -252,6 +257,7 @@ async def generate_all_lessons(
     """
     Generate all lessons for a course in parallel with limited concurrency.
     """
+    use_web_research = request.use_web_research
     # Verify course ownership
     course_result = await db.execute(
         select(Course).where(Course.id == course_id, Course.user_id == current_user.id)
@@ -311,6 +317,7 @@ async def generate_all_lessons(
         lessons_to_generate,
         current_user.id,
         status_key,
+        use_web_research,  # From request body
     )
 
     return {
@@ -352,6 +359,7 @@ async def generate_lessons_background(
     lessons_to_generate: list,
     user_id: int,
     status_key: str,
+    use_web_research: bool = False,
 ) -> None:
     """
     Background task to generate all lessons with limited concurrency.
@@ -371,6 +379,7 @@ async def generate_lessons_background(
                     lesson_data["title"],
                     index_json,
                     language,
+                    use_web_research=use_web_research,
                 )
 
                 # Save to database
@@ -506,8 +515,13 @@ async def download_full_course_pdf(
             content = content.replace("\u2013", "-").replace("\u2014", "--")
 
             # Remove Pandoc attributes and custom syntax
-            # Remove {.class}, {#id}, {key=value} patterns
-            content = re.sub(r"\{[\.#]?[^\}]+\}", "", content)
+            # Remove {.class}, {#id}, {key=value} patterns but preserve Jinja {{ }} syntax
+            # Only match single braces with Pandoc-specific prefixes: . # or key=value
+            content = re.sub(
+                r"\{(?:\.[a-zA-Z0-9_-]+|#[a-zA-Z0-9_-]+|[a-zA-Z_][a-zA-Z0-9_-]*=[^}]+)\}",
+                "",
+                content,
+            )
 
             # Escape problematic patterns that Pandoc might interpret as metadata
             # Replace standalone --- with a safe alternative
@@ -616,8 +630,13 @@ async def download_full_course_epub(
             content = content.replace("\u2013", "-").replace("\u2014", "--")
 
             # Remove Pandoc attributes and custom syntax
-            # Remove {.class}, {#id}, {key=value} patterns
-            content = re.sub(r"\{[\. #]?[^\}]+\}", "", content)
+            # Remove {.class}, {#id}, {key=value} patterns but preserve Jinja {{ }} syntax
+            # Only match single braces with Pandoc-specific prefixes: . # or key=value
+            content = re.sub(
+                r"\{(?:\.[a-zA-Z0-9_-]+|#[a-zA-Z0-9_-]+|[a-zA-Z_][a-zA-Z0-9_-]*=[^}]+)\}",
+                "",
+                content,
+            )
 
             # Escape problematic patterns that Pandoc might interpret as metadata
             # Replace standalone --- with a safe alternative
