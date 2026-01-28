@@ -275,14 +275,19 @@ class TavilyService:
             if tavily_answer:
                 context += f"Quick Answer: {tavily_answer}\n\n"
 
-            # Add sources
+            # Add sources with citation format instructions
             results = response.get("results", [])
             if results:
-                context += "Sources:\n"
+                context += (
+                    "Sources (if used, cite them in a 'Fonti' section at the end):\n"
+                )
                 for i, result in enumerate(results[:3], 1):
-                    context += f"{i}. {result.get('title', 'Untitled')}\n"
-                    context += f"   {result.get('content', '')[:300]}...\n"
-                    context += f"   URL: {result.get('url', 'N/A')}\n\n"
+                    title = result.get("title", "Untitled")
+                    url = result.get("url", "N/A")
+                    content = result.get("content", "")
+                    context += f"{i}. {title}\n"
+                    context += f"   URL: {url}\n"
+                    context += f"   {content[:300]}...\n\n"
 
             logger.info(f"Successfully retrieved web context for question")
             return context

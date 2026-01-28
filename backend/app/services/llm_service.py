@@ -210,7 +210,11 @@ class LLMService:
         Keep your answer concise (2-3 paragraphs maximum).
         Use markdown formatting where appropriate.
         
-        If you used web sources to answer, mention them briefly at the end.
+        IMPORTANT CITATION RULES:
+        - If you used web sources to answer, add a "**Fonti:**" section at the END of your answer
+        - List each source used with format: [Title](URL)
+        - Only cite sources you actually used in your answer
+        - If no web sources were used, don't add the Fonti section
         """
 
         response = await client.chat.completions.create(
