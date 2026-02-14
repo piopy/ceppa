@@ -1,9 +1,31 @@
 import json
 from openai import AsyncOpenAI
 from app.core.config import settings
+from app.core.security import decrypt_value
 from typing import Optional
 
-client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY, base_url=settings.OPENAI_BASE_URL)
+# Default global client (fallback)
+_default_client = AsyncOpenAI(
+    api_key=settings.OPENAI_API_KEY, base_url=settings.OPENAI_BASE_URL
+)
+
+
+def _get_client(user=None) -> AsyncOpenAI:
+    """Get OpenAI client - uses user's custom settings if available, otherwise global defaults."""
+    if user and getattr(user, "custom_openai_api_key", None):
+        return AsyncOpenAI(
+            api_key=decrypt_value(user.custom_openai_api_key),
+            base_url=getattr(user, "custom_openai_base_url", None)
+            or settings.OPENAI_BASE_URL,
+        )
+    return _default_client
+
+
+def _get_model(user=None) -> str:
+    """Get LLM model - uses user's custom model if available, otherwise global default."""
+    if user and getattr(user, "custom_llm_model", None):
+        return user.custom_llm_model
+    return settings.LLM_MODEL
 
 
 class LLMService:
@@ -31,17 +53,17 @@ class LLMService:
         instructions: str = None,
         language: str = "en",
         use_web_research: bool = False,
+        user=None,
     ) -> str:
         lang_instruction = LLMService._get_language_instruction(language)
 
         # Get web context if requested
         web_context = ""
         if use_web_research:
-            from app.services.tavily_service import tavily_service
+            from app.services.tavily_service import TavilyService
 
-            web_context_result = await tavily_service.search_for_course_context(
-                topic, language
-            )
+            tavily = TavilyService.for_user(user)
+            web_context_result = await tavily.search_for_course_context(topic, language)
             if web_context_result:
                 import logging
 
@@ -81,8 +103,8 @@ class LLMService:
         Make the course deep and comprehensive.
         """
 
-        response = await client.chat.completions.create(
-            model=settings.LLM_MODEL,
+        response = await _get_client(user).chat.completions.create(
+            model=_get_model(user),
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
         )
@@ -106,6 +128,7 @@ class LLMService:
         language: str = "en",
         feedback: str = None,
         use_web_research: bool = False,
+        user=None,
     ) -> str:
         lang_instruction = LLMService._get_language_instruction(language).replace(
             "Respond", "Write the lesson"
@@ -118,9 +141,10 @@ class LLMService:
         # Get web context only if requested
         web_context = ""
         if use_web_research:
-            from app.services.tavily_service import tavily_service
+            from app.services.tavily_service import TavilyService
 
-            web_context_result = await tavily_service.search_for_lesson_context(
+            tavily = TavilyService.for_user(user)
+            web_context_result = await tavily.search_for_lesson_context(
                 topic, lesson_title, language
             )
             if web_context_result:
@@ -156,8 +180,8 @@ class LLMService:
         Make it engaging and clear.{feedback_instruction}
         """
 
-        response = await client.chat.completions.create(
-            model=settings.LLM_MODEL,
+        response = await _get_client(user).chat.completions.create(
+            model=_get_model(user),
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
         )
@@ -170,6 +194,7 @@ class LLMService:
         lesson_content: str,
         question: str,
         language: str = "en",
+        user=None,
     ) -> str:
         """
         Answer a user question about a specific lesson using lesson context.
@@ -184,9 +209,10 @@ class LLMService:
 
         # ALWAYS try to get web context for questions (good for current events)
         web_context = ""
-        from app.services.tavily_service import tavily_service
+        from app.services.tavily_service import TavilyService
 
-        web_context_result = await tavily_service.search_for_question_context(
+        tavily = TavilyService.for_user(user)
+        web_context_result = await tavily.search_for_question_context(
             question, truncated_content[:1000], language
         )
         if web_context_result:
@@ -217,8 +243,8 @@ class LLMService:
         - If no web sources were used, don't add the Fonti section
         """
 
-        response = await client.chat.completions.create(
-            model=settings.LLM_MODEL,
+        response = await _get_client(user).chat.completions.create(
+            model=_get_model(user),
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
         )

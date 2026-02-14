@@ -38,6 +38,7 @@ async def create_course(
             course_in.custom_instructions,
             language,
             use_web_research=use_web_research,
+            user=current_user,
         )
         # Validate JSON
         json.loads(index_json_str)
@@ -72,10 +73,12 @@ async def read_courses(
     """
     # Get total count
     count_result = await db.execute(
-        select(func.count()).select_from(Course).where(Course.user_id == current_user.id)
+        select(func.count())
+        .select_from(Course)
+        .where(Course.user_id == current_user.id)
     )
     total = count_result.scalar()
-    
+
     # Get paginated courses
     result = await db.execute(
         select(Course)
@@ -111,10 +114,7 @@ async def read_courses(
         )
 
     return course_schema.CoursesListResponse(
-        items=course_list,
-        total=total,
-        skip=skip,
-        limit=limit
+        items=course_list, total=total, skip=skip, limit=limit
     )
 
 
@@ -148,6 +148,7 @@ async def get_course_lessons(
         {
             "path_in_index": lesson.path_in_index,
             "is_completed": lesson.is_completed,
+            "is_favorite": lesson.is_favorite,
         }
         for lesson in lessons
     ]
@@ -380,6 +381,12 @@ async def generate_lessons_background(
     from app.core.db import AsyncSessionLocal
     from app.services.pdf_service import PDFService
 
+    # Load user for per-user LLM/Tavily settings
+    user = None
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalars().first()
+
     # Create semaphore for concurrency control
     semaphore = asyncio.Semaphore(settings.MAX_CONCURRENT_WORKERS)
 
@@ -393,6 +400,7 @@ async def generate_lessons_background(
                     index_json,
                     language,
                     use_web_research=use_web_research,
+                    user=user,
                 )
 
                 # Save to database

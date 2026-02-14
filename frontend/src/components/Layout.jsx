@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Book, PlusCircle, Home, Github, ChevronLeft, ChevronRight, Moon, Sun } from 'lucide-react';
+import { LogOut, Book, PlusCircle, Home, Github, ChevronLeft, ChevronRight, Moon, Sun, Settings } from 'lucide-react';
 import versionData from '../version.json';
 import { useState, useEffect } from 'react';
 
@@ -94,11 +94,11 @@ export default function Layout() {
 
         <div className="p-4 border-t border-white/10 dark:border-white/5">
           <div className="flex items-center gap-3 px-4 py-3">
-             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold">
+             <Link to="/profile" className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold hover:ring-2 hover:ring-white/40 transition" title="Profile Settings">
                {user?.username?.[0]?.toUpperCase()}
-             </div>
+             </Link>
              <div className="flex-1 overflow-hidden">
-               <p className="text-sm font-medium truncate">{user?.username}</p>
+               <Link to="/profile" className="text-sm font-medium truncate hover:underline block">{user?.username}</Link>
              </div>
              <button
                onClick={() => setDarkMode(!darkMode)}
@@ -112,9 +112,16 @@ export default function Layout() {
                )}
              </button>
           </div>
+          <Link
+            to="/profile"
+            className="w-full flex items-center gap-3 px-4 py-3 mt-1 rounded-lg hover:bg-white/10 dark:hover:bg-white/5 transition text-white/80"
+          >
+            <Settings className="w-5 h-5" />
+            Settings
+          </Link>
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 mt-2 rounded-lg hover:bg-red-500/20 dark:hover:bg-red-500/10 text-red-400 transition"
+            className="w-full flex items-center gap-3 px-4 py-3 mt-1 rounded-lg hover:bg-red-500/20 dark:hover:bg-red-500/10 text-red-400 transition"
           >
             <LogOut className="w-5 h-5" />
             Logout

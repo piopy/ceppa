@@ -17,6 +17,7 @@ class LessonOut(BaseModel):
     content_markdown: str
     pdf_path: Optional[str]
     is_completed: bool
+    is_favorite: bool = False
     user_notes: Optional[str]
     created_at: datetime
 
@@ -25,6 +26,7 @@ class LessonOut(BaseModel):
 
 class LessonUpdate(BaseModel):
     is_completed: Optional[bool] = None
+    is_favorite: Optional[bool] = None
     user_notes: Optional[str] = None
 
 

@@ -9,6 +9,10 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     password_hash = Column(String)
+    custom_openai_api_key = Column(String, nullable=True)
+    custom_openai_base_url = Column(String, nullable=True)
+    custom_llm_model = Column(String, nullable=True)
+    custom_tavily_api_key = Column(String, nullable=True)
 
 
 class Course(Base):
@@ -36,6 +40,7 @@ class Lesson(Base):
         String, nullable=True
     )  # Path to PDF file relative to user media root
     is_completed = Column(Boolean, default=False)
+    is_favorite = Column(Boolean, default=False)
     user_notes = Column(Text, nullable=True)  # For exercises/notes
     created_at = Column(TIMESTAMP, server_default=func.now())
 

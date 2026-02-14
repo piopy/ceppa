@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle, Maximize2, ChevronLeft, DownloadCloud, Trash2, Globe, Save } from 'lucide-react';
+import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle, Maximize2, ChevronLeft, DownloadCloud, Trash2, Globe, Save, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CourseView() {
@@ -11,6 +11,7 @@ export default function CourseView() {
   const [course, setCourse] = useState(null);
   const [index, setIndex] = useState([]);
   const [generatedLessons, setGeneratedLessons] = useState({});
+  const [favoriteLessons, setFavoriteLessons] = useState({});
   const [currentLesson, setCurrentLesson] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lessonLoading, setLessonLoading] = useState(false);
@@ -67,10 +68,15 @@ export default function CourseView() {
     try {
       const res = await client.get(`/courses/${courseId}/lessons`);
       const lessonsMap = {};
+      const favoritesMap = {};
       res.data.forEach(lesson => {
         lessonsMap[lesson.path_in_index] = lesson.is_completed ? 'completed' : 'generated';
+        if (lesson.is_favorite) {
+          favoritesMap[lesson.path_in_index] = true;
+        }
       });
       setGeneratedLessons(lessonsMap);
+      setFavoriteLessons(favoritesMap);
     } catch (err) {
       console.error('Failed to fetch generated lessons:', err);
     }
@@ -91,6 +97,11 @@ export default function CourseView() {
       setGeneratedLessons(prev => ({
         ...prev,
         [lesson.path]: res.data.is_completed ? 'completed' : 'generated'
+      }));
+      // Update favorite status
+      setFavoriteLessons(prev => ({
+        ...prev,
+        [lesson.path]: res.data.is_favorite || false
       }));
       
       // Fetch questions for this lesson
@@ -235,6 +246,35 @@ export default function CourseView() {
     return generatedLessons[path] || 'not-generated';
   };
 
+  const toggleFavorite = async (e, lessonPath) => {
+    e.stopPropagation();
+    // We need the lesson ID. Find it from the current lesson or fetch it.
+    // If the lesson is the currently selected one, use its id
+    if (currentLesson && currentLesson.path_in_index === lessonPath) {
+      const newVal = !favoriteLessons[lessonPath];
+      try {
+        await client.put(`/lessons/${currentLesson.id}`, { is_favorite: newVal });
+        setFavoriteLessons(prev => ({ ...prev, [lessonPath]: newVal }));
+        setCurrentLesson(prev => ({ ...prev, is_favorite: newVal }));
+      } catch (err) {
+        console.error('Failed to toggle favorite:', err);
+      }
+    } else {
+      // Need to get lesson id - fetch lessons list
+      try {
+        const res = await client.get(`/courses/${courseId}/lessons`);
+        const lesson = res.data.find(l => l.path_in_index === lessonPath);
+        if (lesson) {
+          const newVal = !favoriteLessons[lessonPath];
+          await client.put(`/lessons/${lesson.id}`, { is_favorite: newVal });
+          setFavoriteLessons(prev => ({ ...prev, [lessonPath]: newVal }));
+        }
+      } catch (err) {
+        console.error('Failed to toggle favorite:', err);
+      }
+    }
+  };
+
   const getTotalLessons = () => {
     return index.reduce((acc, module) => acc + module.lessons.length, 0);
   };
@@ -334,8 +374,20 @@ export default function CourseView() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`${
             isImmersiveMode ? 'w-full' : 'max-w-4xl mx-auto'
           }`}>
-            {/* Regenerate Button + Immersive Reader */}
+            {/* Regenerate Button + Immersive Reader + Favorite */}
             <div className="flex justify-end mb-4 gap-3">
+              <button
+                onClick={(e) => toggleFavorite(e, currentLesson.path_in_index)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition ${
+                  favoriteLessons[currentLesson.path_in_index]
+                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+                title={favoriteLessons[currentLesson.path_in_index] ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Star className={`w-4 h-4 ${favoriteLessons[currentLesson.path_in_index] ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                {favoriteLessons[currentLesson.path_in_index] ? 'Favorited' : 'Favorite'}
+              </button>
               <button
                 onClick={() => {
                   const newImmersiveMode = !isImmersiveMode;
@@ -670,6 +722,7 @@ export default function CourseView() {
               <div className="space-y-1">
                 {module.lessons.map((lesson, lIdx) => {
                   const status = getLessonStatus(lesson.path);
+                  const isFav = favoriteLessons[lesson.path];
                   return (
                     <button
                       key={lIdx}
@@ -686,6 +739,17 @@ export default function CourseView() {
                           <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" title="Not generated" />
                         )}
                       </div>
+
+                      {/* Favorite Star - only for generated/completed lessons */}
+                      {status !== 'not-generated' && (
+                        <span
+                          className="flex-shrink-0 cursor-pointer"
+                          onClick={(e) => toggleFavorite(e, lesson.path)}
+                          title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          <Star className={`w-3.5 h-3.5 transition ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400'}`} />
+                        </span>
+                      )}
                       
                       <span className="whitespace-nowrap transition-transform duration-[3000ms] ease-linear group-hover:-translate-x-full flex-1">
                         {lesson.title}

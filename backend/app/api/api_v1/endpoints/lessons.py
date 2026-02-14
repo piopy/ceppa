@@ -75,7 +75,11 @@ async def generate_lesson(
     try:
         language = getattr(course, "language", "en")  # Default to 'en' if not set
         content = await LLMService.generate_lesson_content(
-            course.title, lesson_in.title, course.index_json, language
+            course.title,
+            lesson_in.title,
+            course.index_json,
+            language,
+            user=current_user,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"LLM Generation failed: {str(e)}")
@@ -129,6 +133,8 @@ async def update_lesson(
 
     if lesson_in.is_completed is not None:
         lesson.is_completed = lesson_in.is_completed
+    if lesson_in.is_favorite is not None:
+        lesson.is_favorite = lesson_in.is_favorite
     if lesson_in.user_notes is not None:
         lesson.user_notes = lesson_in.user_notes
 
@@ -184,7 +190,12 @@ async def regenerate_lesson(
         language = getattr(course, "language", "en")
         user_feedback = feedback.get("feedback", "")
         content = await LLMService.generate_lesson_content(
-            course.title, lesson.title, course.index_json, language, user_feedback
+            course.title,
+            lesson.title,
+            course.index_json,
+            language,
+            user_feedback,
+            user=current_user,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"LLM Generation failed: {str(e)}")
@@ -242,6 +253,7 @@ async def ask_question(
             lesson_content=lesson.content_markdown,
             question=question_in.question,
             language=getattr(course, "language", "en"),
+            user=current_user,
         )
     except Exception as e:
         raise HTTPException(

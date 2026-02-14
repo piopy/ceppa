@@ -17,9 +17,9 @@ class TavilyService:
     Handles quota limits gracefully - if search fails, returns empty context.
     """
 
-    def __init__(self):
-        self.enabled = getattr(settings, "TAVILY_ENABLED", False)
-        self.api_key = getattr(settings, "TAVILY_API_KEY", None)
+    def __init__(self, api_key: str = None):
+        self.api_key = api_key or getattr(settings, "TAVILY_API_KEY", None)
+        self.enabled = getattr(settings, "TAVILY_ENABLED", False) or bool(api_key)
         self.credit_threshold = getattr(settings, "TAVILY_CREDIT_THRESHOLD", 50)
 
         if self.enabled and self.api_key:
@@ -30,6 +30,15 @@ class TavilyService:
                 self.enabled = False
         else:
             self.client = None
+
+    @classmethod
+    def for_user(cls, user=None):
+        """Get a TavilyService instance using user's custom key if available."""
+        from app.core.security import decrypt_value
+        custom_key = None
+        if user and getattr(user, "custom_tavily_api_key", None):
+            custom_key = decrypt_value(user.custom_tavily_api_key)
+        return cls(api_key=custom_key)
 
     def _check_credits(self) -> bool:
         """
@@ -298,5 +307,4 @@ class TavilyService:
             return None
 
 
-# Singleton instance
-tavily_service = TavilyService()
+# Default singleton instance (uses global settings)\ntavily_service = TavilyService()
