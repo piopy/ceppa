@@ -7,6 +7,7 @@ class LessonCreate(BaseModel):
     course_id: int
     title: str
     path_in_index: str
+    use_web_research: bool = False
 
 
 class LessonOut(BaseModel):

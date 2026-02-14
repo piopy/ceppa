@@ -79,6 +79,7 @@ async def generate_lesson(
             lesson_in.title,
             course.index_json,
             language,
+            use_web_research=lesson_in.use_web_research,
             user=current_user,
         )
     except Exception as e:

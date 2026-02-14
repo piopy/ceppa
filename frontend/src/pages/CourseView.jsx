@@ -34,7 +34,7 @@ export default function CourseView() {
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   
   // Web Research Toggle for lesson generation
-  const [useWebResearch, setUseWebResearch] = useState(false);
+  const [useWebResearch, setUseWebResearch] = useState(true);
   
   // Download loading states
   const [downloadingPdf, setDownloadingPdf] = useState(false);
@@ -89,7 +89,8 @@ export default function CourseView() {
       const res = await client.post('/lessons/generate', {
         course_id: course.id,
         title: lesson.title,
-        path_in_index: lesson.path
+        path_in_index: lesson.path,
+        use_web_research: useWebResearch
       });
       setCurrentLesson(res.data);
       setNotes(res.data.user_notes || '');

@@ -113,7 +113,7 @@ export default function Dashboard() {
   const [newTopic, setNewTopic] = useState('');
   const [language, setLanguage] = useState('it');
   const [customLanguage, setCustomLanguage] = useState('');
-  const [useWebResearch, setUseWebResearch] = useState(false);
+  const [useWebResearch, setUseWebResearch] = useState(true);
   const [customInstructions, setCustomInstructions] = useState('');
   const [showCustomInstructions, setShowCustomInstructions] = useState(false);
   const [tavilyCredits, setTavilyCredits] = useState(null);
