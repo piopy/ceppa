@@ -17,10 +17,18 @@ def _user_to_out(user: User) -> dict:
         "id": user.id,
         "username": user.username,
         # Decrypt keys for the frontend - they'll be shown masked in password fields
-        "custom_openai_api_key": decrypt_value(user.custom_openai_api_key) if user.custom_openai_api_key else None,
+        "custom_openai_api_key": (
+            decrypt_value(user.custom_openai_api_key)
+            if user.custom_openai_api_key
+            else None
+        ),
         "custom_openai_base_url": user.custom_openai_base_url,
         "custom_llm_model": user.custom_llm_model,
-        "custom_tavily_api_key": decrypt_value(user.custom_tavily_api_key) if user.custom_tavily_api_key else None,
+        "custom_tavily_api_key": (
+            decrypt_value(user.custom_tavily_api_key)
+            if user.custom_tavily_api_key
+            else None
+        ),
     }
 
 

@@ -35,6 +35,7 @@ class TavilyService:
     def for_user(cls, user=None):
         """Get a TavilyService instance using user's custom key if available."""
         from app.core.security import decrypt_value
+
         custom_key = None
         if user and getattr(user, "custom_tavily_api_key", None):
             custom_key = decrypt_value(user.custom_tavily_api_key)
