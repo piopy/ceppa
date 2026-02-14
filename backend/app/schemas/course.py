@@ -49,6 +49,13 @@ class CourseList(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CoursesListResponse(BaseModel):
+    items: List[CourseList]
+    total: int
+    skip: int
+    limit: int
+
+
 class CourseReorder(BaseModel):
     course_order: List[int]
 

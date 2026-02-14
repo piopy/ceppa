@@ -16,4 +16,4 @@ async def get_tavily_credits(
     Get Tavily API usage and remaining credits.
     Returns current usage, limit, and remaining credits.
     """
-    return tavily_service.get_credits_info()
+    return await tavily_service.get_credits_info()

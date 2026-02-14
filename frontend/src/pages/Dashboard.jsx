@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import client from '../api/client';
-import { Plus, BookOpen, Clock, Loader2, Languages, Trash2, Pencil, CheckCircle2, GripVertical, Globe } from 'lucide-react';
+import { Plus, BookOpen, Clock, Loader2, Languages, Trash2, Pencil, CheckCircle2, GripVertical, Globe, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
@@ -114,22 +114,35 @@ export default function Dashboard() {
   const [language, setLanguage] = useState('it');
   const [customLanguage, setCustomLanguage] = useState('');
   const [useWebResearch, setUseWebResearch] = useState(false);
+  const [customInstructions, setCustomInstructions] = useState('');
+  const [showCustomInstructions, setShowCustomInstructions] = useState(false);
   const [tavilyCredits, setTavilyCredits] = useState(null);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [renaming, setRenaming] = useState(null);
   const [newCourseName, setNewCourseName] = useState('');
   const [activeDragId, setActiveDragId] = useState(null);
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [totalCourses, setTotalCourses] = useState(0);
+  const PAGE_SIZE = 9; // 3x3 grid
 
   useEffect(() => {
     fetchCourses();
     fetchTavilyCredits();
-  }, []);
+  }, [page]); // Re-fetch when page changes
 
   const fetchCourses = async () => {
     try {
-      const res = await client.get('/courses/');
-      setCourses(res.data);
+      const res = await client.get('/courses/', {
+        params: {
+          skip: (page - 1) * PAGE_SIZE,
+          limit: PAGE_SIZE
+        }
+      });
+      setCourses(res.data.items);
+      setTotalCourses(res.data.total);
     } catch (err) {
       console.error(err);
     } finally {
@@ -156,9 +169,12 @@ export default function Dashboard() {
       await client.post('/courses/', { 
         topic: newTopic, 
         language: selectedLanguage,
-        use_web_research: useWebResearch 
+        use_web_research: useWebResearch,
+        custom_instructions: customInstructions || undefined
       });
       setNewTopic('');
+      setCustomInstructions('');
+      setShowCustomInstructions(false);
       setUseWebResearch(false); // Reset toggle after creation
       fetchCourses();
       // Refresh Tavily credits if web research was used
@@ -339,6 +355,40 @@ export default function Dashboard() {
             </button>
           </div>
           
+          {/* Custom Instructions Section */}
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setShowCustomInstructions(!showCustomInstructions)}
+              disabled={creating}
+              className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition disabled:opacity-50"
+            >
+              {showCustomInstructions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {showCustomInstructions ? 'Hide' : 'Add'} custom instructions
+            </button>
+            
+            {showCustomInstructions && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <textarea
+                  value={customInstructions}
+                  onChange={(e) => setCustomInstructions(e.target.value)}
+                  disabled={creating}
+                  placeholder="e.g., Focus on practical examples, include more exercises, use simple language for beginners, cover advanced topics in depth..."
+                  rows={3}
+                  className="w-full px-4 py-3 text-sm border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 transition outline-none shadow-sm resize-none"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  These instructions will guide the AI in generating course content tailored to your preferences.
+                </p>
+              </motion.div>
+            )}
+          </div>
+          
           {/* Web Research Toggle */}
           <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border-2 border-blue-100 dark:border-blue-800">
             <label className="flex items-center gap-3 cursor-pointer flex-1">
@@ -386,59 +436,100 @@ export default function Dashboard() {
             You haven't started any courses yet. Type a topic above to begin.
           </div>
         ) : (
-          <DndContext 
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragCancel={handleDragCancel}
-          >
-            <SortableContext 
-              items={courses.map(c => c.id)} 
-              strategy={rectSortingStrategy}
+          <>
+            <DndContext 
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {courses.map((course, idx) => (
-                  <SortableCourseCard
-                    key={course.id}
-                    course={course}
-                    idx={idx}
-                    onDelete={handleDeleteCourse}
-                    onRename={handleRenameCourse}
-                    onNavigate={handleNavigateToCourse}
-                    deleting={deleting}
-                    renaming={renaming}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-            
-            {/* DragOverlay - Card that follows mouse */}
-            <DragOverlay>
-              {activeCourse ? (
-                <div 
-                  className={`p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border-2 border-primary ring-4 ring-primary/30 ${
-                    activeCourse.all_lessons_completed 
-                      ? 'border-green-500' 
-                      : ''
-                  }`}
-                  style={{ width: '300px', cursor: 'grabbing' }}
-                >
-                  <h4 className="text-2xl font-bold mb-4 text-primary dark:text-gray-100">{activeCourse.title}</h4>
-                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                    <Clock className="w-4 h-4" />
-                    <span>Started {new Date(activeCourse.created_at).toLocaleDateString()}</span>
-                  </div>
-                  {activeCourse.all_lessons_completed && (
-                    <div className="mt-3 flex items-center gap-1 text-green-600 text-sm font-medium">
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Completed</span>
-                    </div>
-                  )}
+              <SortableContext 
+                items={courses.map(c => c.id)} 
+                strategy={rectSortingStrategy}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {courses.map((course, idx) => (
+                    <SortableCourseCard
+                      key={course.id}
+                      course={course}
+                      idx={idx}
+                      onDelete={handleDeleteCourse}
+                      onRename={handleRenameCourse}
+                      onNavigate={handleNavigateToCourse}
+                      deleting={deleting}
+                      renaming={renaming}
+                    />
+                  ))}
                 </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
+              </SortableContext>
+              
+              {/* DragOverlay - Card that follows mouse */}
+              <DragOverlay>
+                {activeCourse ? (
+                  <div 
+                    className={`p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border-2 border-primary ring-4 ring-primary/30 ${
+                      activeCourse.all_lessons_completed 
+                        ? 'border-green-500' 
+                        : ''
+                    }`}
+                    style={{ width: '300px', cursor: 'grabbing' }}
+                  >
+                    <h4 className="text-2xl font-bold mb-4 text-primary dark:text-gray-100">{activeCourse.title}</h4>
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <Clock className="w-4 h-4" />
+                      <span>Started {new Date(activeCourse.created_at).toLocaleDateString()}</span>
+                    </div>
+                    {activeCourse.all_lessons_completed && (
+                      <div className="mt-3 flex items-center gap-1 text-green-600 text-sm font-medium">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Completed</span>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+            
+            {/* Pagination Controls */}
+            {totalCourses > PAGE_SIZE && (
+              <div className="mt-8 flex items-center justify-center gap-4">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+                
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: Math.ceil(totalCourses / PAGE_SIZE) }, (_, i) => i + 1).map(pageNum => (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`w-10 h-10 rounded-xl font-semibold transition ${
+                        pageNum === page
+                          ? 'bg-primary text-white'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                </div>
+                
+                <button
+                  onClick={() => setPage(p => Math.min(Math.ceil(totalCourses / PAGE_SIZE), p + 1))}
+                  disabled={page >= Math.ceil(totalCourses / PAGE_SIZE)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>

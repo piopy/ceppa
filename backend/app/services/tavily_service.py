@@ -48,7 +48,7 @@ class TavilyService:
             logger.warning(f"Failed to check Tavily credits: {e}")
             return False
 
-    def get_credits_info(self) -> Dict[str, Any]:
+    async def get_credits_info(self) -> Dict[str, Any]:
         """
         Get current Tavily API usage and credits remaining.
         Returns dict with usage info or error message.
@@ -60,40 +60,41 @@ class TavilyService:
             }
 
         try:
-            import requests
+            import httpx
 
-            response = requests.get(
-                "https://api.tavily.com/usage",
-                headers={"Authorization": f"Bearer {self.api_key}"},
-                timeout=5,
-            )
-
-            if response.status_code == 200:
-                data = response.json()
-                # Extract usage info from response
-                # Expected structure: {"key": {"usage": X, "limit": Y}, "account": {...}}
-                key_info = data.get("key", {})
-                usage = key_info.get("usage", 0)
-                limit = key_info.get("limit")
-
-                # If limit is None, assume free tier limit of 1000
-                if limit is None:
-                    limit = 1000
-
-                return {
-                    "enabled": True,
-                    "usage": usage,
-                    "limit": limit,
-                    "remaining": limit - usage,
-                }
-            else:
-                logger.warning(
-                    f"Failed to fetch Tavily usage: HTTP {response.status_code}"
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "https://api.tavily.com/usage",
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                    timeout=5.0,
                 )
-                return {
-                    "enabled": True,
-                    "error": f"API returned status {response.status_code}",
-                }
+
+                if response.status_code == 200:
+                    data = response.json()
+                    # Extract usage info from response
+                    # Expected structure: {"key": {"usage": X, "limit": Y}, "account": {...}}
+                    key_info = data.get("key", {})
+                    usage = key_info.get("usage", 0)
+                    limit = key_info.get("limit")
+
+                    # If limit is None, assume free tier limit of 1000
+                    if limit is None:
+                        limit = 1000
+
+                    return {
+                        "enabled": True,
+                        "usage": usage,
+                        "limit": limit,
+                        "remaining": limit - usage,
+                    }
+                else:
+                    logger.warning(
+                        f"Failed to fetch Tavily usage: HTTP {response.status_code}"
+                    )
+                    return {
+                        "enabled": True,
+                        "error": f"API returned status {response.status_code}",
+                    }
         except Exception as e:
             logger.warning(f"Failed to fetch Tavily credits: {e}")
             return {"enabled": True, "error": str(e)}

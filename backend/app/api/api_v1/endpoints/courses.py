@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import func
 import asyncio
 import json
 import os
@@ -59,7 +60,7 @@ async def create_course(
     return course
 
 
-@router.get("/", response_model=List[course_schema.CourseList])
+@router.get("/", response_model=course_schema.CoursesListResponse)
 async def read_courses(
     skip: int = 0,
     limit: int = 100,
@@ -67,8 +68,15 @@ async def read_courses(
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
-    Retrieve user's courses with lesson completion stats.
+    Retrieve user's courses with lesson completion stats and pagination metadata.
     """
+    # Get total count
+    count_result = await db.execute(
+        select(func.count()).select_from(Course).where(Course.user_id == current_user.id)
+    )
+    total = count_result.scalar()
+    
+    # Get paginated courses
     result = await db.execute(
         select(Course)
         .where(Course.user_id == current_user.id)
@@ -102,7 +110,12 @@ async def read_courses(
             )
         )
 
-    return course_list
+    return course_schema.CoursesListResponse(
+        items=course_list,
+        total=total,
+        skip=skip,
+        limit=limit
+    )
 
 
 @router.get("/{course_id}/lessons", response_model=List[dict])
