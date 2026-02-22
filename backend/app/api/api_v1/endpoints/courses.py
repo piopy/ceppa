@@ -230,7 +230,7 @@ async def delete_course(
     """
     Delete a course and all its lessons.
     """
-    from app.models.base import Lesson
+    from app.models.base import Lesson, LessonQuestion
 
     # Verify course ownership
     result = await db.execute(
@@ -240,13 +240,19 @@ async def delete_course(
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    # Delete all lessons associated with this course
-    await db.execute(select(Lesson).where(Lesson.course_id == course_id))
+    # Fetch all lessons for this course
     lessons_result = await db.execute(
         select(Lesson).where(Lesson.course_id == course_id)
     )
     lessons = lessons_result.scalars().all()
+
     for lesson in lessons:
+        # Delete all questions belonging to this lesson first (NOT NULL FK constraint)
+        questions_result = await db.execute(
+            select(LessonQuestion).where(LessonQuestion.lesson_id == lesson.id)
+        )
+        for question in questions_result.scalars().all():
+            await db.delete(question)
         await db.delete(lesson)
 
     # Delete the course

@@ -14,6 +14,8 @@ class User(Base):
     custom_llm_model = Column(String, nullable=True)
     custom_tavily_api_key = Column(String, nullable=True)
 
+    courses = relationship("Course", back_populates="user", cascade="all, delete-orphan")
+
 
 class Course(Base):
     __tablename__ = "courses"
@@ -26,7 +28,8 @@ class Course(Base):
     position = Column(Integer, nullable=True, default=0)  # For drag & drop ordering
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    user = relationship("User", backref="courses")
+    user = relationship("User", back_populates="courses")
+    lessons = relationship("Lesson", back_populates="course", cascade="all, delete-orphan")
 
 
 class Lesson(Base):
@@ -44,7 +47,8 @@ class Lesson(Base):
     user_notes = Column(Text, nullable=True)  # For exercises/notes
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    course = relationship("Course", backref="lessons")
+    course = relationship("Course", back_populates="lessons")
+    questions = relationship("LessonQuestion", back_populates="lesson", cascade="all, delete-orphan")
 
 
 class LessonQuestion(Base):
@@ -55,4 +59,4 @@ class LessonQuestion(Base):
     answer = Column(Text, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-    lesson = relationship("Lesson", backref="questions")
+    lesson = relationship("Lesson", back_populates="questions")
