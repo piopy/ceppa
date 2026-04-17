@@ -7,11 +7,7 @@ from sqlalchemy import func
 import asyncio
 import json
 import os
-import traceback
-import logging
 from pathlib import Path
-
-logger = logging.getLogger(__name__)
 
 from app.api import deps
 from app.core.db import get_db
@@ -47,10 +43,6 @@ async def create_course(
         # Validate JSON
         json.loads(index_json_str)
     except Exception as e:
-        logger.error("=== COURSE GENERATION FAILED ===")
-        logger.error("Exception type: %s", type(e).__name__)
-        logger.error("Exception: %s", str(e))
-        logger.error("Traceback:\n%s", traceback.format_exc())
         raise HTTPException(
             status_code=500, detail=f"Failed to generate course index: {str(e)}"
         )
