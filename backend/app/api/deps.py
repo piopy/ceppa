@@ -22,8 +22,8 @@ async def get_current_user(
     )
     try:
         payload = jwt.decode(
-            token, settings.OPENAI_API_KEY[:32], algorithms=[security.ALGORITHM]
-        )  # Matching secret
+            token, security._secret[:32], algorithms=[security.ALGORITHM]
+        )
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
