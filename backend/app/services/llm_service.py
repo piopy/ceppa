@@ -1,47 +1,96 @@
 import json
+import os
+import sys
+import logging
 from openai import AsyncOpenAI
 import httpx
 from app.core.config import settings
 from app.core.security import decrypt_value
 from typing import Optional
 
+logger = logging.getLogger(__name__)
 
-class GeminiAsyncClient(httpx.AsyncClient):
-    def __init__(self, gemini_key: str, **kwargs):
-        self._gemini_key = gemini_key
-        kwargs.setdefault("trust_env", False)
-        super().__init__(**kwargs)
+# Rimuove tutte le credenziali Google/OpenAI dall'env per evitare che openai
+# le passi come credenziali aggiuntive agli endpoint Google (400 "Multiple credentials").
+_CRED_VARS = (
+    "OPENAI_API_KEY",
+    "OPENAI_BASE_URL",
+    "GOOGLE_API_KEY",
+    "GOOGLE_APPLICATION_CREDENTIALS",
+    "GOOGLE_CLOUD_PROJECT",
+    "GCLOUD_PROJECT",
+    "CLOUDSDK_AUTH_ACCESS_TOKEN",
+    "GOOGLE_OAUTH_ACCESS_TOKEN",
+)
+for _var in _CRED_VARS:
+    os.environ.pop(_var, None)
+os.environ["NO_GCE_CHECK"] = "true"
+os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "false"
 
-    async def send(self, request, **kwargs):
-        request.headers.pop("authorization", None)
-        request.headers["x-goog-api-key"] = self._gemini_key
-        return await super().send(request, **kwargs)
+logger.warning("=== LLM SERVICE MODULE LOADED ===")
+logger.warning("ENV VARS AFTER CLEANUP:")
+for _var in _CRED_VARS + (
+    "NO_GCE_CHECK",
+    "GOOGLE_GENAI_USE_VERTEXAI",
+    "DATABASE_URL",
+    "LLM_MODEL",
+    "DEFAULT_LANGUAGE",
+):
+    val = os.environ.get(_var, "<NOT SET>")
+    if val not in ("<NOT SET>", "true", "false") and len(val) > 8:
+        val = val[:4] + "***" + val[-4:]
+    logger.warning(f"  {_var}={val}")
+
+logger.warning(
+    "GOOGLE-AUTH MODULES IN sys.modules: %s",
+    [k for k in sys.modules if "google" in k.lower()],
+)
+
+
+def _mask(s: str) -> str:
+    if not s or len(s) < 8:
+        return "<SHORT_OR_EMPTY>"
+    return s[:4] + "***" + s[-4:]
 
 
 def _get_client(user=None) -> AsyncOpenAI:
+    logger.warning("=== _get_client called ===")
+
+    # Log env state at call time (may differ from module load time)
+    for _var in _CRED_VARS:
+        logger.warning("  env[%s]=%s", _var, os.environ.get(_var, "<NOT SET>"))
+
     if user and getattr(user, "custom_openai_api_key", None):
-        api_key = decrypt_value(user.custom_openai_api_key)
+        encrypted = user.custom_openai_api_key
+        api_key = decrypt_value(encrypted)
         base_url = (
             getattr(user, "custom_openai_base_url", None) or settings.OPENAI_BASE_URL
         )
+
+        logger.warning("  source=USER_CUSTOM")
+        logger.warning("  encrypted_stored=%s", _mask(encrypted))
+        logger.warning("  decrypted_key=%s", _mask(api_key))
+        logger.warning("  decrypted_is_same_as_encrypted=%s", api_key == encrypted)
+        logger.warning("  base_url=%s", base_url)
+        logger.warning("  settings.OPENAI_API_KEY=%s", _mask(settings.OPENAI_API_KEY))
+        logger.warning("  settings.OPENAI_BASE_URL=%s", settings.OPENAI_BASE_URL)
     else:
         api_key = settings.OPENAI_API_KEY
         base_url = settings.OPENAI_BASE_URL
+        logger.warning("  source=GLOBAL_SETTINGS")
+        logger.warning("  api_key=%s", _mask(api_key))
+        logger.warning("  base_url=%s", base_url)
+        logger.warning("  user=%s", user)
+        if user:
+            logger.warning(
+                "  user.custom_openai_api_key=%s",
+                getattr(user, "custom_openai_api_key", "<attr missing>"),
+            )
 
-    is_gemini = "googleapis.com" in (base_url or "")
-
-    if is_gemini:
-        return AsyncOpenAI(
-            api_key="unused",
-            base_url=base_url,
-            http_client=GeminiAsyncClient(gemini_key=api_key),
-        )
-
-    return AsyncOpenAI(
-        api_key=api_key,
-        base_url=base_url,
-        http_client=httpx.AsyncClient(trust_env=False),
-    )
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    logger.warning("  client._api_key=%s", _mask(str(client.api_key)))
+    logger.warning("  client.base_url=%s", client.base_url)
+    return client
 
 
 def _get_model(user=None) -> str:
