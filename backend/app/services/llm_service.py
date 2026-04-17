@@ -1,27 +1,47 @@
 import json
-import os
 from openai import AsyncOpenAI
+import httpx
 from app.core.config import settings
 from app.core.security import decrypt_value
 from typing import Optional
 
-# Rimuove credenziali dall'env: openai>=1.50 aggiunge automaticamente headers Google
-# (x-goog-api-key + Authorization) causando "Multiple authentication credentials".
-for _var in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "GOOGLE_API_KEY",
-             "GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_CLOUD_PROJECT",
-             "GCLOUD_PROJECT", "CLOUDSDK_AUTH_ACCESS_TOKEN"):
-    os.environ.pop(_var, None)
-os.environ["NO_GCE_CHECK"] = "true"
+
+class GeminiAsyncClient(httpx.AsyncClient):
+    def __init__(self, gemini_key: str, **kwargs):
+        self._gemini_key = gemini_key
+        kwargs.setdefault("trust_env", False)
+        super().__init__(**kwargs)
+
+    async def send(self, request, **kwargs):
+        request.headers.pop("authorization", None)
+        request.headers["x-goog-api-key"] = self._gemini_key
+        return await super().send(request, **kwargs)
 
 
 def _get_client(user=None) -> AsyncOpenAI:
     if user and getattr(user, "custom_openai_api_key", None):
         api_key = decrypt_value(user.custom_openai_api_key)
-        base_url = getattr(user, "custom_openai_base_url", None) or settings.OPENAI_BASE_URL
+        base_url = (
+            getattr(user, "custom_openai_base_url", None) or settings.OPENAI_BASE_URL
+        )
     else:
         api_key = settings.OPENAI_API_KEY
         base_url = settings.OPENAI_BASE_URL
-    return AsyncOpenAI(api_key=api_key, base_url=base_url)
+
+    is_gemini = "googleapis.com" in (base_url or "")
+
+    if is_gemini:
+        return AsyncOpenAI(
+            api_key="unused",
+            base_url=base_url,
+            http_client=GeminiAsyncClient(gemini_key=api_key),
+        )
+
+    return AsyncOpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        http_client=httpx.AsyncClient(trust_env=False),
+    )
 
 
 def _get_model(user=None) -> str:
