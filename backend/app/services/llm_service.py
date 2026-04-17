@@ -5,10 +5,15 @@ from app.core.config import settings
 from app.core.security import decrypt_value
 from typing import Optional
 
-# Rimuove le variabili d'ambiente che la libreria openai leggerebbe come credenziali aggiuntive,
-# causando "Multiple authentication credentials" su endpoint Google.
-os.environ.pop("OPENAI_API_KEY", None)
-os.environ.pop("OPENAI_BASE_URL", None)
+# Rimuove tutte le credenziali Google/OpenAI dall'env per evitare che openai
+# le passi come credenziali aggiuntive agli endpoint Google (400 "Multiple credentials").
+for _var in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "GOOGLE_API_KEY",
+             "GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_CLOUD_PROJECT",
+             "GCLOUD_PROJECT", "CLOUDSDK_AUTH_ACCESS_TOKEN"):
+    os.environ.pop(_var, None)
+# Disabilita il check GCE metadata server usato da google-auth per ottenere ADC.
+os.environ["NO_GCE_CHECK"] = "true"
+os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "false"
 
 
 def _get_client(user=None) -> AsyncOpenAI:
