@@ -1,24 +1,24 @@
 import json
+import os
 from openai import AsyncOpenAI
 from app.core.config import settings
 from app.core.security import decrypt_value
 from typing import Optional
 
-# Default global client (fallback)
-_default_client = AsyncOpenAI(
-    api_key=settings.OPENAI_API_KEY, base_url=settings.OPENAI_BASE_URL
-)
+# Rimuove le variabili d'ambiente che la libreria openai leggerebbe come credenziali aggiuntive,
+# causando "Multiple authentication credentials" su endpoint Google.
+os.environ.pop("OPENAI_API_KEY", None)
+os.environ.pop("OPENAI_BASE_URL", None)
 
 
 def _get_client(user=None) -> AsyncOpenAI:
-    """Get OpenAI client - uses user's custom settings if available, otherwise global defaults."""
     if user and getattr(user, "custom_openai_api_key", None):
-        return AsyncOpenAI(
-            api_key=decrypt_value(user.custom_openai_api_key),
-            base_url=getattr(user, "custom_openai_base_url", None)
-            or settings.OPENAI_BASE_URL,
-        )
-    return _default_client
+        api_key = decrypt_value(user.custom_openai_api_key)
+        base_url = getattr(user, "custom_openai_base_url", None) or settings.OPENAI_BASE_URL
+    else:
+        api_key = settings.OPENAI_API_KEY
+        base_url = settings.OPENAI_BASE_URL
+    return AsyncOpenAI(api_key=api_key, base_url=base_url)
 
 
 def _get_model(user=None) -> str:
