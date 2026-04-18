@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 
 from app.api import deps
 from app.models.base import User
-from app.services.tavily_service import tavily_service
+from app.services.tavily_service import TavilyService
 
 router = APIRouter()
 
@@ -15,5 +15,7 @@ async def get_tavily_credits(
     """
     Get Tavily API usage and remaining credits.
     Returns current usage, limit, and remaining credits.
+    Uses user's custom Tavily key if configured.
     """
-    return tavily_service.get_credits_info()
+    tavily = TavilyService.for_user(current_user)
+    return await tavily.get_credits_info()

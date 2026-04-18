@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import func
 import asyncio
 import json
 import os
@@ -37,6 +38,7 @@ async def create_course(
             course_in.custom_instructions,
             language,
             use_web_research=use_web_research,
+            user=current_user,
         )
         # Validate JSON
         json.loads(index_json_str)
@@ -59,7 +61,7 @@ async def create_course(
     return course
 
 
-@router.get("/", response_model=List[course_schema.CourseList])
+@router.get("/", response_model=course_schema.CoursesListResponse)
 async def read_courses(
     skip: int = 0,
     limit: int = 100,
@@ -67,8 +69,17 @@ async def read_courses(
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
-    Retrieve user's courses with lesson completion stats.
+    Retrieve user's courses with lesson completion stats and pagination metadata.
     """
+    # Get total count
+    count_result = await db.execute(
+        select(func.count())
+        .select_from(Course)
+        .where(Course.user_id == current_user.id)
+    )
+    total = count_result.scalar()
+
+    # Get paginated courses
     result = await db.execute(
         select(Course)
         .where(Course.user_id == current_user.id)
@@ -102,7 +113,9 @@ async def read_courses(
             )
         )
 
-    return course_list
+    return course_schema.CoursesListResponse(
+        items=course_list, total=total, skip=skip, limit=limit
+    )
 
 
 @router.get("/{course_id}/lessons", response_model=List[dict])
@@ -135,6 +148,7 @@ async def get_course_lessons(
         {
             "path_in_index": lesson.path_in_index,
             "is_completed": lesson.is_completed,
+            "is_favorite": lesson.is_favorite,
         }
         for lesson in lessons
     ]
@@ -216,7 +230,7 @@ async def delete_course(
     """
     Delete a course and all its lessons.
     """
-    from app.models.base import Lesson
+    from app.models.base import Lesson, LessonQuestion
 
     # Verify course ownership
     result = await db.execute(
@@ -226,13 +240,19 @@ async def delete_course(
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    # Delete all lessons associated with this course
-    await db.execute(select(Lesson).where(Lesson.course_id == course_id))
+    # Fetch all lessons for this course
     lessons_result = await db.execute(
         select(Lesson).where(Lesson.course_id == course_id)
     )
     lessons = lessons_result.scalars().all()
+
     for lesson in lessons:
+        # Delete all questions belonging to this lesson first (NOT NULL FK constraint)
+        questions_result = await db.execute(
+            select(LessonQuestion).where(LessonQuestion.lesson_id == lesson.id)
+        )
+        for question in questions_result.scalars().all():
+            await db.delete(question)
         await db.delete(lesson)
 
     # Delete the course
@@ -367,6 +387,12 @@ async def generate_lessons_background(
     from app.core.db import AsyncSessionLocal
     from app.services.pdf_service import PDFService
 
+    # Load user for per-user LLM/Tavily settings
+    user = None
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalars().first()
+
     # Create semaphore for concurrency control
     semaphore = asyncio.Semaphore(settings.MAX_CONCURRENT_WORKERS)
 
@@ -380,6 +406,7 @@ async def generate_lessons_background(
                     index_json,
                     language,
                     use_web_research=use_web_research,
+                    user=user,
                 )
 
                 # Save to database

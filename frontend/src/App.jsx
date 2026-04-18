@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import CourseView from './pages/CourseView';
+import Profile from './pages/Profile';
 import Layout from './components/Layout';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
              <Route element={<Layout />}>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/course/:courseId/*" element={<CourseView />} />
              </Route>
           </Route>

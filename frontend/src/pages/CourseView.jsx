@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle, Maximize2, ChevronLeft, DownloadCloud, Trash2, Globe } from 'lucide-react';
+import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle, Maximize2, ChevronLeft, DownloadCloud, Trash2, Globe, Save, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CourseView() {
@@ -11,6 +11,7 @@ export default function CourseView() {
   const [course, setCourse] = useState(null);
   const [index, setIndex] = useState([]);
   const [generatedLessons, setGeneratedLessons] = useState({});
+  const [favoriteLessons, setFavoriteLessons] = useState({});
   const [currentLesson, setCurrentLesson] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lessonLoading, setLessonLoading] = useState(false);
@@ -33,7 +34,14 @@ export default function CourseView() {
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   
   // Web Research Toggle for lesson generation
-  const [useWebResearch, setUseWebResearch] = useState(false);
+  const [useWebResearch, setUseWebResearch] = useState(true);
+  
+  // Download loading states
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingEpub, setDownloadingEpub] = useState(false);
+  
+  // Notes saving state
+  const [savingNotes, setSavingNotes] = useState(false);
   
   // Get the base URL for media files
   const API_BASE_URL = client.defaults.baseURL.replace('/api/v1', '');
@@ -60,10 +68,15 @@ export default function CourseView() {
     try {
       const res = await client.get(`/courses/${courseId}/lessons`);
       const lessonsMap = {};
+      const favoritesMap = {};
       res.data.forEach(lesson => {
         lessonsMap[lesson.path_in_index] = lesson.is_completed ? 'completed' : 'generated';
+        if (lesson.is_favorite) {
+          favoritesMap[lesson.path_in_index] = true;
+        }
       });
       setGeneratedLessons(lessonsMap);
+      setFavoriteLessons(favoritesMap);
     } catch (err) {
       console.error('Failed to fetch generated lessons:', err);
     }
@@ -76,7 +89,8 @@ export default function CourseView() {
       const res = await client.post('/lessons/generate', {
         course_id: course.id,
         title: lesson.title,
-        path_in_index: lesson.path
+        path_in_index: lesson.path,
+        use_web_research: useWebResearch
       });
       setCurrentLesson(res.data);
       setNotes(res.data.user_notes || '');
@@ -84,6 +98,11 @@ export default function CourseView() {
       setGeneratedLessons(prev => ({
         ...prev,
         [lesson.path]: res.data.is_completed ? 'completed' : 'generated'
+      }));
+      // Update favorite status
+      setFavoriteLessons(prev => ({
+        ...prev,
+        [lesson.path]: res.data.is_favorite || false
       }));
       
       // Fetch questions for this lesson
@@ -162,11 +181,27 @@ export default function CourseView() {
     }
   };
 
-  const handleUpdate = async () => {
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      await client.put(`/lessons/${currentLesson.id}`, {
+        user_notes: notes
+      });
+      setSuccessMsg('Notes saved successfully!');
+      // Update current lesson to reflect saved state
+      setCurrentLesson(prev => ({ ...prev, user_notes: notes }));
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      alert('Failed to save notes.');
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  const handleToggleCompletion = async () => {
     try {
       const newCompletedState = !currentLesson.is_completed;
       await client.put(`/lessons/${currentLesson.id}`, {
-        user_notes: notes,
         is_completed: newCompletedState
       });
       setSuccessMsg(newCompletedState ? 'Lesson marked as completed!' : 'Lesson marked as incomplete!');
@@ -176,6 +211,7 @@ export default function CourseView() {
         ...prev,
         [currentLesson.path_in_index]: newCompletedState ? 'completed' : 'generated'
       }));
+      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
       alert('Failed to update progress.');
     }
@@ -209,6 +245,35 @@ export default function CourseView() {
 
   const getLessonStatus = (path) => {
     return generatedLessons[path] || 'not-generated';
+  };
+
+  const toggleFavorite = async (e, lessonPath) => {
+    e.stopPropagation();
+    // We need the lesson ID. Find it from the current lesson or fetch it.
+    // If the lesson is the currently selected one, use its id
+    if (currentLesson && currentLesson.path_in_index === lessonPath) {
+      const newVal = !favoriteLessons[lessonPath];
+      try {
+        await client.put(`/lessons/${currentLesson.id}`, { is_favorite: newVal });
+        setFavoriteLessons(prev => ({ ...prev, [lessonPath]: newVal }));
+        setCurrentLesson(prev => ({ ...prev, is_favorite: newVal }));
+      } catch (err) {
+        console.error('Failed to toggle favorite:', err);
+      }
+    } else {
+      // Need to get lesson id - fetch lessons list
+      try {
+        const res = await client.get(`/courses/${courseId}/lessons`);
+        const lesson = res.data.find(l => l.path_in_index === lessonPath);
+        if (lesson) {
+          const newVal = !favoriteLessons[lessonPath];
+          await client.put(`/lessons/${lesson.id}`, { is_favorite: newVal });
+          setFavoriteLessons(prev => ({ ...prev, [lessonPath]: newVal }));
+        }
+      } catch (err) {
+        console.error('Failed to toggle favorite:', err);
+      }
+    }
   };
 
   const getTotalLessons = () => {
@@ -310,8 +375,20 @@ export default function CourseView() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`${
             isImmersiveMode ? 'w-full' : 'max-w-4xl mx-auto'
           }`}>
-            {/* Regenerate Button + Immersive Reader */}
+            {/* Regenerate Button + Immersive Reader + Favorite */}
             <div className="flex justify-end mb-4 gap-3">
+              <button
+                onClick={(e) => toggleFavorite(e, currentLesson.path_in_index)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition ${
+                  favoriteLessons[currentLesson.path_in_index]
+                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+                title={favoriteLessons[currentLesson.path_in_index] ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Star className={`w-4 h-4 ${favoriteLessons[currentLesson.path_in_index] ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                {favoriteLessons[currentLesson.path_in_index] ? 'Favorited' : 'Favorite'}
+              </button>
               <button
                 onClick={() => {
                   const newImmersiveMode = !isImmersiveMode;
@@ -363,10 +440,24 @@ export default function CourseView() {
                 placeholder="Paste your code, output, or reflection here..."
                 className="w-full h-48 p-4 border dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary outline-none transition"
               />
+              {notes !== (currentLesson.user_notes || '') && (
+                <p className="text-sm text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
+                  <Loader2 className="w-3 h-3" />
+                  You have unsaved changes
+                </p>
+              )}
               <div className="mt-6 flex items-center justify-between">
                 <div className="flex gap-4">
                   <button 
-                    onClick={handleUpdate}
+                    onClick={handleSaveNotes}
+                    disabled={savingNotes || notes === (currentLesson.user_notes || '')}
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {savingNotes ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                    {savingNotes ? 'Saving...' : 'Save Notes'}
+                  </button>
+                  <button 
+                    onClick={handleToggleCompletion}
                     className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition ${currentLesson.is_completed ? 'bg-green-100 text-green-700' : 'bg-primary text-white hover:bg-indigo-700'}`}
                   >
                     <CheckCircle2 className="w-5 h-5" />
@@ -632,6 +723,7 @@ export default function CourseView() {
               <div className="space-y-1">
                 {module.lessons.map((lesson, lIdx) => {
                   const status = getLessonStatus(lesson.path);
+                  const isFav = favoriteLessons[lesson.path];
                   return (
                     <button
                       key={lIdx}
@@ -648,6 +740,17 @@ export default function CourseView() {
                           <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" title="Not generated" />
                         )}
                       </div>
+
+                      {/* Favorite Star - only for generated/completed lessons */}
+                      {status !== 'not-generated' && (
+                        <span
+                          className="flex-shrink-0 cursor-pointer"
+                          onClick={(e) => toggleFavorite(e, lesson.path)}
+                          title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          <Star className={`w-3.5 h-3.5 transition ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400'}`} />
+                        </span>
+                      )}
                       
                       <span className="whitespace-nowrap transition-transform duration-[3000ms] ease-linear group-hover:-translate-x-full flex-1">
                         {lesson.title}
@@ -673,8 +776,9 @@ export default function CourseView() {
           {/* PDF Download Button */}
           <button
             onClick={async () => {
-              if (!areAllLessonsGenerated()) return;
+              if (!areAllLessonsGenerated() || downloadingPdf) return;
               
+              setDownloadingPdf(true);
               try {
                 const response = await client.get(`/courses/${courseId}/download-full-pdf`, {
                   responseType: 'blob'
@@ -692,25 +796,37 @@ export default function CourseView() {
               } catch (err) {
                 console.error('Download failed:', err);
                 alert('Failed to download full course PDF. Make sure all lessons are generated.');
+              } finally {
+                setDownloadingPdf(false);
               }
             }}
-            disabled={!areAllLessonsGenerated()}
+            disabled={!areAllLessonsGenerated() || downloadingPdf}
             className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition shadow-lg ${
-              areAllLessonsGenerated() 
+              areAllLessonsGenerated() && !downloadingPdf
                 ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:shadow-xl cursor-pointer' 
                 : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
             }`}
             title={areAllLessonsGenerated() ? 'Download complete course as single PDF' : `${getTotalLessons() - getGeneratedCount()} lesson(s) still need to be generated`}
           >
-            <Download className="w-5 h-5" />
-            {areAllLessonsGenerated() ? 'Download Complete Course PDF' : `Waiting for ${getTotalLessons() - getGeneratedCount()} lesson(s)...`}
+            {downloadingPdf ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <Download className="w-5 h-5" />
+                {areAllLessonsGenerated() ? 'Download Complete Course PDF' : `Waiting for ${getTotalLessons() - getGeneratedCount()} lesson(s)...`}
+              </>
+            )}
           </button>
           
           {/* EPUB Download Button */}
           <button
             onClick={async () => {
-              if (!areAllLessonsGenerated()) return;
+              if (!areAllLessonsGenerated() || downloadingEpub) return;
               
+              setDownloadingEpub(true);
               try {
                 const response = await client.get(`/courses/${courseId}/download-full-epub`, {
                   responseType: 'blob'
@@ -728,18 +844,29 @@ export default function CourseView() {
               } catch (err) {
                 console.error('Download failed:', err);
                 alert('Failed to download full course EPUB. Make sure all lessons are generated.');
+              } finally {
+                setDownloadingEpub(false);
               }
             }}
-            disabled={!areAllLessonsGenerated()}
+            disabled={!areAllLessonsGenerated() || downloadingEpub}
             className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition shadow-lg ${
-              areAllLessonsGenerated() 
+              areAllLessonsGenerated() && !downloadingEpub
                 ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 hover:shadow-xl cursor-pointer' 
                 : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
             }`}
             title={areAllLessonsGenerated() ? 'Download complete course as single EPUB' : `${getTotalLessons() - getGeneratedCount()} lesson(s) still need to be generated`}
           >
-            <BookOpen className="w-5 h-5" />
-            {areAllLessonsGenerated() ? 'Download Complete Course EPUB' : `Waiting for ${getTotalLessons() - getGeneratedCount()} lesson(s)...`}
+            {downloadingEpub ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Generating EPUB...
+              </>
+            ) : (
+              <>
+                <BookOpen className="w-5 h-5" />
+                {areAllLessonsGenerated() ? 'Download Complete Course EPUB' : `Waiting for ${getTotalLessons() - getGeneratedCount()} lesson(s)...`}
+              </>
+            )}
           </button>
         </div>
         </div>
