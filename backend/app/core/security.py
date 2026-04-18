@@ -12,9 +12,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 
 # Derive a Fernet key from the OPENAI_API_KEY (used as app secret)
-_fernet_key = base64.urlsafe_b64encode(
-    hashlib.sha256(settings.OPENAI_API_KEY.encode()).digest()
-)
+_secret = getattr(settings, "SECRET_KEY", None) or settings.DATABASE_URL
+_fernet_key = base64.urlsafe_b64encode(hashlib.sha256(_secret.encode()).digest())
 _fernet = Fernet(_fernet_key)
 
 
@@ -27,9 +26,7 @@ def create_access_token(
         expire = datetime.utcnow() + timedelta(minutes=30)  # Default
 
     to_encode = {"exp": expire, "sub": str(subject)}
-    encoded_jwt = jwt.encode(
-        to_encode, settings.OPENAI_API_KEY[:32], algorithm=ALGORITHM
-    )  # Using API Key prefix as secret for simple dev, ideally use a separate SECRET_KEY
+    encoded_jwt = jwt.encode(to_encode, _secret[:32], algorithm=ALGORITHM)
     return encoded_jwt
 
 
