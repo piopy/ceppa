@@ -89,13 +89,28 @@ def _get_client(user=None) -> AsyncOpenAI:
     extra = {}
     if "generativelanguage.googleapis.com" in base_url.lower():
         # Google's OpenAI-compatible endpoint only accepts x-goog-api-key.
-        # Passing api_key= causes the SDK to inject Authorization: Bearer,
-        # which Google rejects with HTTP 400 "Multiple authentication
-        # credentials received". Use a placeholder for api_key and pass
-        # the real key via x-goog-api-key header instead.
-        extra["default_headers"] = {"x-goog-api-key": api_key}
+        # The OpenAI SDK always injects "Authorization: Bearer {api_key}",
+        # which Google rejects (even with api_key="not-used" → API_KEY_INVALID).
+        # We use an httpx request event hook to strip the Authorization header
+        # and inject x-goog-api-key so only one auth mechanism reaches Google.
+        _google_key = api_key
+
+        async def _inject_google_auth(request: httpx.Request) -> None:
+            request.headers["x-goog-api-key"] = _google_key
+            try:
+                del request.headers["authorization"]
+            except KeyError:
+                pass
+
+        extra["http_client"] = httpx.AsyncClient(
+            event_hooks={"request": [_inject_google_auth]}
+        )
         api_key = "not-used"
-    client = AsyncOpenAI(api_key=api_key, base_url=base_url, **extra)
+    client = AsyncOpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        **extra,
+    )
     logger.warning("  client._api_key=%s", _mask(str(client.api_key)))
     logger.warning("  client.base_url=%s", client.base_url)
     return client
