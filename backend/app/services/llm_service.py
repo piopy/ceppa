@@ -86,8 +86,16 @@ def _get_client(user=None) -> AsyncOpenAI:
                 "  user.custom_openai_api_key=%s",
                 getattr(user, "custom_openai_api_key", "<attr missing>"),
             )
-
-    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    extra = {}
+    if "generativelanguage.googleapis.com" in base_url.lower():
+        # Google's OpenAI-compatible endpoint only accepts x-goog-api-key.
+        # Passing api_key= causes the SDK to inject Authorization: Bearer,
+        # which Google rejects with HTTP 400 "Multiple authentication
+        # credentials received". Use a placeholder for api_key and pass
+        # the real key via x-goog-api-key header instead.
+        extra["default_headers"] = {"x-goog-api-key": api_key}
+        api_key = "not-used"
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url, **extra)
     logger.warning("  client._api_key=%s", _mask(str(client.api_key)))
     logger.warning("  client.base_url=%s", client.base_url)
     return client
