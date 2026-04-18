@@ -54,3 +54,4 @@ envs/*.env
 poetry.lock
 data/user_files/*
 !data/user_files/.gitkeep
+dump/*

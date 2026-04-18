@@ -1,0 +1,187 @@
+# ==========================================
+# SECRETS DA CONFIGURARE SU HUGGING FACE SPACES (Settings -> Variables and secrets)
+# ==========================================
+# - ENV_MODE       (opzionale, es. "deploy")
+# - OPENAI_API_KEY (opzionale: gli utenti possono inserirla dal loro profilo nell'app)
+# - OPENAI_API_KEY (opzionale: gli utenti possono inserirla dal loro profilo nell'app)
+# - TAVILY_API_KEY (opzionale: per la ricerca web, configurabile anche via UI)
+#
+# NOTA SULLO STORAGE: Postgres e i file utente sono integrati in questo container.
+# Alla sospensione dello Space, i dati andranno persi (storage effimero).
+# Se vuoi mantenere i dati, attiva il "Persistent Storage" nelle impostazioni 
+# dello Space, e aggiorna il file per usare `/data` (es. `/data/pgdata` e `/data/user_files`).
+# ==========================================
+
+# ==========================================
+# STAGE 1: Build del Frontend (Vite/React)
+# ==========================================
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app
+
+# Argomenti per il repository Git (sovrascrivibili in fase di build, o settabili qui)
+ARG GIT_REPO_URL="https://github.com/piopy/ceppa.git"
+ARG GIT_BRANCH="feature/nice-to-have-list"
+
+# Installa git, clona il repository (usando le variabili) e posizionati nella cartella frontend
+RUN apk add --no-cache git \
+    && git clone -b ${GIT_BRANCH} --single-branch ${GIT_REPO_URL} /app \
+    && cd /app/frontend \
+    && npm install \
+    && sed -i "s@import.meta.env.VITE_API_URL || 'http://localhost:8000'@''@g" src/api/client.js \
+    && npm run build
+
+# ==========================================
+# STAGE 2: Immagine Finale (Python + Nginx)
+# ==========================================
+FROM python:3.10-slim-bookworm
+
+# Imposta la porta standard di Hugging Face
+ENV PORT=7860
+
+# OPENAI_API_KEY non è nel Docker ENV per evitare che la libreria openai
+# la legga come credenziale aggiuntiva nelle chiamate a Google (causing 400 "Multiple credentials").
+# Viene scritta solo nel file .env, letto da pydantic-settings.
+ENV LLM_MODEL=gemini-3-flash-preview \
+    DEFAULT_LANGUAGE=it \
+    MAX_CONCURRENT_WORKERS=3
+
+# Installa Nginx, Curl, i requisiti per PDF (Pandoc + LaTeX), PostgreSQL e Git
+RUN apt-get update && apt-get install -y \
+    nginx \
+    curl \
+    git \
+    pandoc \
+    texlive-xetex \
+    texlive-fonts-recommended \
+    lmodern \
+    postgresql-15 \
+    postgresql-client-15 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Fix per utente non-root (richiesto da Hugging Face Spaces che gira con uid 1000)
+RUN mkdir -p /var/log/nginx /var/lib/nginx /var/www/html /app \
+    && chown -R 1000:1000 /var/log/nginx /var/lib/nginx /var/www/html /app \
+    && sed -i 's|pid /run/nginx.pid;|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf \
+    && sed -i 's/^user /#user /g' /etc/nginx/nginx.conf \
+    && mkdir -p /tmp/client_body /tmp/proxy /tmp/fastcgi /tmp/uwsgi /tmp/scgi \
+    && chown -R 1000:1000 /tmp/client_body /tmp/proxy /tmp/fastcgi /tmp/uwsgi /tmp/scgi
+
+# Installa Poetry
+ENV POETRY_HOME=/opt/poetry
+ENV PATH="$POETRY_HOME/bin:$PATH"
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+# Configura e installa il Backend dal repository clonato
+WORKDIR /app/backend
+COPY --from=frontend-builder /app/backend/pyproject.toml /app/backend/poetry.lock* ./
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-root --no-interaction --no-ansi
+
+# Copia il resto del codice del backend
+COPY --from=frontend-builder /app/backend/ ./
+
+# Ripristina i permessi su /app/backend dopo le COPY (che eseguono come root)
+RUN chown -R 1000:1000 /app/backend
+
+# Scrivi il .env di default per pydantic-settings.
+# OPENAI_API_KEY è qui (file), NON come ENV Docker, così la libreria openai non la trova nel processo.
+RUN printf 'OPENAI_API_KEY=dummy-key-to-prevent-startup-crash\nOPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/\nLLM_MODEL=gemini-3-flash-preview\nDEFAULT_LANGUAGE=it\nMAX_CONCURRENT_WORKERS=3\nDATABASE_URL=postgresql+asyncpg://appuser@127.0.0.1:5432/ceppadb\n' > /app/backend/.env \
+    && chown 1000:1000 /app/backend/.env
+
+# Copia i file statici generati dal frontend nella root di Nginx
+COPY --from=frontend-builder /app/frontend/dist /var/www/html
+
+# Configura Nginx al volo per servire Frontend e Backend sulla stessa porta
+RUN echo 'server { \
+    listen 7860; \
+    server_name _; \
+    \
+    # Fix permessi tmp path per utente non-root \
+    client_body_temp_path /tmp/client_body; \
+    proxy_temp_path /tmp/proxy; \
+    fastcgi_temp_path /tmp/fastcgi; \
+    uwsgi_temp_path /tmp/uwsgi; \
+    scgi_temp_path /tmp/scgi; \
+    \
+    # Serve il Frontend (React application) \
+    location / { \
+        root /var/www/html; \
+        index index.html; \
+        try_files $uri $uri/ /index.html; \
+    } \
+    \
+    # Proxy per le API FastAPI \
+    location /api/ { \
+        proxy_pass http://127.0.0.1:8000/api/; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+    } \
+    \
+    # Proxy per i file PDF salvati in mount statici di FastAPI \
+    location /media/ { \
+        proxy_pass http://127.0.0.1:8000/media/; \
+        proxy_set_header Host $host; \
+    } \
+    \
+    # (Opzionale) Proxy per la documentazione Swagger \
+    location /docs { proxy_pass http://127.0.0.1:8000/docs; } \
+    location /openapi.json { proxy_pass http://127.0.0.1:8000/openapi.json; } \
+}' > /etc/nginx/sites-available/default
+
+# Crea la directory necessaria ai PDF e dai i permessi 777 come da documentazione
+RUN mkdir -p /app/user_files && chown -R 1000:1000 /app/user_files && chmod 777 /app/user_files
+
+# Prepara un data directory custom per Postgres gestito da uid 1000
+RUN useradd -m -u 1000 appuser \
+    && mkdir -p /app/pgdata /var/run/postgresql \
+    && chown -R 1000:1000 /app/pgdata /var/run/postgresql /var/log/postgresql
+
+# Imposta il DATABASE_URL locale per FastAPI (usiamo trust auth senza password)
+ENV DATABASE_URL=postgresql+asyncpg://appuser@127.0.0.1:5432/ceppadb
+
+# Crea lo script di avvio che lancia Postgres, Nginx e Uvicorn
+RUN cat > /app/start.sh  << 'EOF'
+#!/bin/bash
+
+# Inizializza Postgres solo al primo avvio, creando un superuser specifico
+if [ ! -f /app/pgdata/PG_VERSION ]; then
+    /usr/lib/postgresql/15/bin/initdb -D /app/pgdata --username=appuser
+    # Modifica pg_hba.conf per permettere connessioni locali
+    echo "host all all 127.0.0.1/32 trust" >> /app/pgdata/pg_hba.conf
+fi
+
+# Avvia Postgres come utente corrente (1000)
+/usr/lib/postgresql/15/bin/pg_ctl -D /app/pgdata -l /app/pgdata/pg.log start
+
+sleep 2
+
+# Crea DB (il ruolo è l'utente corrente, 'appuser')
+psql -h 127.0.0.1 -U appuser -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'ceppadb'" \
+    | grep -q 1 || psql -h 127.0.0.1 -U appuser -d postgres -c "CREATE DATABASE ceppadb;"
+
+# Avvia Nginx in background
+nginx
+
+# Se HF Spaces ha fornito secrets reali, aggiorna il .env con i valori runtime
+[ -n "$OPENAI_API_KEY" ] && sed -i "s/^OPENAI_API_KEY=.*/OPENAI_API_KEY=$OPENAI_API_KEY/" /app/backend/.env
+[ -n "$OPENAI_BASE_URL" ] && sed -i "s|^OPENAI_BASE_URL=.*|OPENAI_BASE_URL=$OPENAI_BASE_URL|" /app/backend/.env
+
+# Avvia Uvicorn in un ambiente pulito: rimuove OPENAI_API_KEY e credenziali Google
+# dall'ambiente del processo, così la libreria openai usa SOLO l'api_key esplicita.
+exec env -u OPENAI_API_KEY -u OPENAI_BASE_URL \
+    -u GOOGLE_API_KEY -u GOOGLE_APPLICATION_CREDENTIALS \
+    -u GOOGLE_CLOUD_PROJECT -u GCLOUD_PROJECT \
+    NO_GCE_CHECK=true PYTHONDONTWRITEBYTECODE=1 \
+    uvicorn app.main:app --host 127.0.0.1 --port 8000
+EOF
+
+RUN chown 1000:1000 /app/start.sh && chmod +x /app/start.sh
+
+# Esponi la porta richiesta
+EXPOSE 7860
+
+# Passa all'utente non-root richiesto da HF Spaces (1000)
+USER 1000
+
+# Esegui lo script di avvio
+CMD ["/app/start.sh"]
