@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.api_v1.endpoints import auth, courses, lessons, tavily, users
+from app.api.api_v1.endpoints import auth, courses, lessons, tavily, users, hands_on
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -7,3 +7,4 @@ api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(courses.router, prefix="/courses", tags=["courses"])
 api_router.include_router(lessons.router, prefix="/lessons", tags=["lessons"])
 api_router.include_router(tavily.router, prefix="/tavily", tags=["tavily"])
+api_router.include_router(hands_on.router, prefix="/hands-on", tags=["hands-on"])

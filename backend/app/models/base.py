@@ -4,6 +4,9 @@ from sqlalchemy.sql import func
 from app.core.db import Base
 
 
+from sqlalchemy import JSON as SQLA_JSON
+
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -15,6 +18,7 @@ class User(Base):
     custom_tavily_api_key = Column(String, nullable=True)
 
     courses = relationship("Course", back_populates="user", cascade="all, delete-orphan")
+    hands_on_courses = relationship("HandsOnCourse", back_populates="user", cascade="all, delete-orphan")
 
 
 class Course(Base):
@@ -60,3 +64,41 @@ class LessonQuestion(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     lesson = relationship("Lesson", back_populates="questions")
+
+
+class HandsOnCourse(Base):
+    """
+    Separate table for hands-on/lab courses to avoid any impact on existing theory courses.
+    """
+    __tablename__ = "hands_on_courses"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    topic = Column(String)
+    title = Column(String)
+    description = Column(Text)
+    index_json = Column(Text)  # JSON tree of the lab index (30% theory / 70% practice modules)
+    language = Column(String, default="en")
+    custom_instructions = Column(Text, nullable=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    user = relationship("User", back_populates="hands_on_courses")
+    labs = relationship("Lab", back_populates="hands_on_course", cascade="all, delete-orphan")
+
+
+class Lab(Base):
+    """
+    Individual lab sessions within a hands-on course.
+    Each lab has theory content (30%) + practical steps (70%).
+    """
+    __tablename__ = "labs"
+    id = Column(Integer, primary_key=True, index=True)
+    hands_on_course_id = Column(Integer, ForeignKey("hands_on_courses.id"))
+    title = Column(String)
+    path_in_index = Column(String)  # e.g., "1.1", "2.3"
+    theory_content = Column(Text)  # The 30% theory markdown
+    steps_json = Column(Text)  # JSON array of practical steps (70%)
+    is_completed = Column(Boolean, default=False)
+    user_notes = Column(Text, nullable=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    hands_on_course = relationship("HandsOnCourse", back_populates="labs")

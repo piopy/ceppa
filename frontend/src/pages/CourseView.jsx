@@ -43,9 +43,10 @@ export default function CourseView() {
   // Notes saving state
   const [savingNotes, setSavingNotes] = useState(false);
   
-  // Get the base URL for media files
+  // Get the base URL for API calls (used as fallback)
   const API_BASE_URL = client.defaults.baseURL.replace('/api/v1', '');
   const MEDIA_URL = `${API_BASE_URL}/media`;
+  const pdfDownloadUrl = (lessonId) => `${API_BASE_URL}/api/v1/lessons/${lessonId}/pdf`;
 
   useEffect(() => {
     fetchCourse();
@@ -463,17 +464,17 @@ export default function CourseView() {
                     <CheckCircle2 className="w-5 h-5" />
                     {currentLesson.is_completed ? 'Completed' : 'Mark as Completed'}
                   </button>
-                  {currentLesson.pdf_path && (
+                  {currentLesson.id && (
                     <>
                       <button
-                        onClick={() => window.open(`${MEDIA_URL}/${currentLesson.pdf_path}`, '_blank')}
+                        onClick={() => window.open(pdfDownloadUrl(currentLesson.id), '_blank')}
                         className="flex items-center gap-2 px-6 py-3 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-800 transition"
                       >
                         <FileText className="w-5 h-5" />
                         View PDF
                       </button>
                       <a 
-                        href={`${MEDIA_URL}/${currentLesson.pdf_path}`} 
+                        href={pdfDownloadUrl(currentLesson.id)} 
                         download
                         className="flex items-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition"
                       >

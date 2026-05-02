@@ -9,20 +9,25 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      // Username is already set during login/register
-      // If user is not set (e.g., page refresh), we should fetch from token or clear it
-      if (!user) {
-        // For now, redirect to login on refresh
-        // In production, decode JWT or call /me endpoint
-        setLoading(false);
-      } else {
-        setLoading(false);
+    const restoreSession = async () => {
+      if (token) {
+        if (!user) {
+          // Page refresh: token exists in localStorage but user state was lost
+          try {
+            const response = await client.get('/users/me');
+            setUser(response.data);
+          } catch (err) {
+            // Token invalid or expired — clean up
+            localStorage.removeItem('token');
+            setToken(null);
+          }
+        }
       }
-    } else {
       setLoading(false);
-    }
-  }, [token]);
+    };
+    
+    restoreSession();
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = async (username, password) => {
     const formData = new FormData();

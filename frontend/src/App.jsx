@@ -5,6 +5,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import CourseView from './pages/CourseView';
+import HandsOnLabs from './pages/HandsOnLabs';
+import LabView from './pages/LabView';
 import Profile from './pages/Profile';
 import Layout from './components/Layout';
 
@@ -21,6 +23,8 @@ function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/course/:courseId/*" element={<CourseView />} />
+                <Route path="/labs" element={<HandsOnLabs />} />
+                <Route path="/labs/:courseId/*" element={<LabView />} />
              </Route>
           </Route>
 

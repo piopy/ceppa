@@ -1,7 +1,9 @@
 from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+import os
 
 from app.api import deps
 from app.core.db import get_db
@@ -340,3 +342,70 @@ async def delete_question(
     await db.commit()
 
     return {"message": "Question deleted successfully"}
+
+
+@router.get("/{lesson_id}/pdf")
+async def get_lesson_pdf(
+    lesson_id: int,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Get a lesson's PDF file. If the PDF file doesn't exist on disk,
+    regenerate it from the stored content_markdown.
+    """
+    # Verify ownership
+    result = await db.execute(
+        select(Lesson)
+        .join(Course)
+        .where(Lesson.id == lesson_id, Course.user_id == current_user.id)
+    )
+    lesson = result.scalars().first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    # If no content, can't generate PDF
+    if not lesson.content_markdown:
+        raise HTTPException(status_code=400, detail="Lesson has no content to generate PDF from")
+
+    # Check if PDF exists on disk
+    pdf_relative_path = lesson.pdf_path
+    if pdf_relative_path:
+        pdf_full_path = PDFService.BASE_DIR / pdf_relative_path
+        if pdf_full_path.exists():
+            return FileResponse(
+                path=str(pdf_full_path),
+                media_type="application/pdf",
+                filename=f"{PDFService._sanitize_filename(lesson.title)}.pdf",
+            )
+
+    # PDF doesn't exist — regenerate it
+    # Get course for title
+    course_res = await db.execute(select(Course).where(Course.id == lesson.course_id))
+    course = course_res.scalars().first()
+    course_title = course.title if course else "Course"
+
+    pdf_path = await PDFService.convert_markdown_to_pdf(
+        lesson.content_markdown,
+        current_user.id,
+        course_title,
+        lesson.title,
+    )
+
+    if not pdf_path:
+        raise HTTPException(status_code=500, detail="Failed to generate PDF")
+
+    # Update DB with new path
+    lesson.pdf_path = pdf_path
+    await db.commit()
+
+    # Serve the regenerated PDF
+    pdf_full_path = PDFService.BASE_DIR / pdf_path
+    if not pdf_full_path.exists():
+        raise HTTPException(status_code=500, detail="Generated PDF file not found")
+
+    return FileResponse(
+        path=str(pdf_full_path),
+        media_type="application/pdf",
+        filename=f"{PDFService._sanitize_filename(lesson.title)}.pdf",
+    )

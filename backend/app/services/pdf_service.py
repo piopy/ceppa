@@ -56,46 +56,53 @@ class PDFService:
         with open(md_file, "w", encoding="utf-8") as f:
             f.write(content_md)
 
-        # Run Pandoc
-        # Try xelatex first, then fallback to pdflatex if it fails
-        pdf_engines = ["xelatex", "pdflatex"]
+        try:
+            # Run Pandoc
+            # Try xelatex first, then fallback to pdflatex if it fails
+            pdf_engines = ["xelatex", "pdflatex"]
 
-        for engine in pdf_engines:
+            for engine in pdf_engines:
+                try:
+                    result = subprocess.run(
+                        [
+                            "pandoc",
+                            str(md_file),
+                            "-o",
+                            str(pdf_file),
+                            f"--pdf-engine={engine}",
+                            "-V",
+                            "geometry:margin=1in",
+                            "--toc",
+                        ],
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=120,  # 2 minute timeout
+                    )
+                    # If successful, break out of loop
+                    break
+                except subprocess.CalledProcessError as e:
+                    error_msg = (
+                        f"Pandoc Error with {engine} (exit {e.returncode}): {e.stderr}"
+                    )
+                    print(error_msg)
+                    # If this was the last engine, return None
+                    if engine == pdf_engines[-1]:
+                        return None
+                    # Otherwise, try next engine
+                    continue
+                except subprocess.TimeoutExpired:
+                    print(f"Pandoc timeout with {engine} for lesson: {lesson_title}")
+                    if engine == pdf_engines[-1]:
+                        return None
+                    continue
+        finally:
+            # Clean up the temporary .md file after conversion
             try:
-                result = subprocess.run(
-                    [
-                        "pandoc",
-                        str(md_file),
-                        "-o",
-                        str(pdf_file),
-                        f"--pdf-engine={engine}",
-                        "-V",
-                        "geometry:margin=1in",
-                        "--toc",
-                    ],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                    timeout=120,  # 2 minute timeout
-                )
-                # If successful, break out of loop
-                break
-            except subprocess.CalledProcessError as e:
-                error_msg = (
-                    f"Pandoc Error with {engine} (exit {e.returncode}): {e.stderr}"
-                )
-                print(error_msg)
-                # If this was the last engine, return None
-                if engine == pdf_engines[-1]:
-                    return None
-                # Otherwise, try next engine
-                continue
-            except subprocess.TimeoutExpired:
-                print(f"Pandoc timeout with {engine} for lesson: {lesson_title}")
-                if engine == pdf_engines[-1]:
-                    return None
-                continue
-            return None
+                if md_file.exists():
+                    os.remove(md_file)
+            except OSError:
+                pass  # Ignore cleanup errors
 
         # Return relative path for DB/Serving
         return (
@@ -115,33 +122,41 @@ class PDFService:
         md_file = dir_path / f"{safe_lesson}.md"
         epub_file = dir_path / f"{safe_lesson}.epub"
 
-        # Save MD
-        with open(md_file, "w", encoding="utf-8") as f:
-            f.write(content_md)
-
-        # Run Pandoc to generate EPUB
         try:
-            result = subprocess.run(
-                [
-                    "pandoc",
-                    str(md_file),
-                    "-o",
-                    str(epub_file),
-                    "--toc",
-                    "--toc-depth=3",
-                ],
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=120,  # 2 minute timeout
-            )
-        except subprocess.CalledProcessError as e:
-            error_msg = f"Pandoc EPUB Error (exit {e.returncode}): {e.stderr}"
-            print(error_msg)
-            return None
-        except subprocess.TimeoutExpired:
-            print(f"Pandoc EPUB timeout for: {lesson_title}")
-            return None
+            # Save MD
+            with open(md_file, "w", encoding="utf-8") as f:
+                f.write(content_md)
+
+            # Run Pandoc to generate EPUB
+            try:
+                result = subprocess.run(
+                    [
+                        "pandoc",
+                        str(md_file),
+                        "-o",
+                        str(epub_file),
+                        "--toc",
+                        "--toc-depth=3",
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,  # 2 minute timeout
+                )
+            except subprocess.CalledProcessError as e:
+                error_msg = f"Pandoc EPUB Error (exit {e.returncode}): {e.stderr}"
+                print(error_msg)
+                return None
+            except subprocess.TimeoutExpired:
+                print(f"Pandoc EPUB timeout for: {lesson_title}")
+                return None
+        finally:
+            # Clean up the temporary .md file after conversion
+            try:
+                if md_file.exists():
+                    os.remove(md_file)
+            except OSError:
+                pass  # Ignore cleanup errors
 
         # Return relative path for DB/Serving
         return f"{user_id}/{PDFService._sanitize_filename(course_title)}/{safe_lesson}.epub"
