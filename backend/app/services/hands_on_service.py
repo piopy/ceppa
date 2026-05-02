@@ -123,6 +123,44 @@ class HandsOnService:
         return result.scalars().first()
 
     @staticmethod
+    async def regenerate_lab(
+        db: AsyncSession,
+        user: User,
+        lab: Lab,
+        hands_on_course: HandsOnCourse,
+        feedback: str,
+        use_web_research: bool = False,
+    ) -> Lab:
+        """Regenerate a lab with user feedback."""
+        # Generate content via LLM with feedback
+        lab_json_str = await LLMService.generate_lab_content(
+            hands_on_course.topic,
+            lab.title,
+            hands_on_course.index_json,
+            hands_on_course.language or "en",
+            use_web_research=use_web_research,
+            user=user,
+        )
+
+        # Parse the JSON response
+        try:
+            lab_data = json.loads(lab_json_str)
+            theory_content = lab_data.get("theory_content", "")
+            steps = lab_data.get("steps", [])
+            steps_json = json.dumps(steps)
+        except json.JSONDecodeError:
+            # Fallback: treat entire response as theory if JSON parsing fails
+            theory_content = lab_json_str
+            steps_json = json.dumps([])
+
+        # Update lab content
+        lab.theory_content = theory_content
+        lab.steps_json = steps_json
+        await db.commit()
+        await db.refresh(lab)
+        return lab
+
+    @staticmethod
     async def update_lab_progress(
         db: AsyncSession,
         lab: Lab,

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ChevronRight, ChevronDown, CheckCircle2, Loader2, Send, BookOpen, FlaskConical, Star, Lightbulb, Terminal, ArrowLeft, Save, RefreshCcw, Maximize2, ChevronLeft, Download, FileText, Zap, MessageCircle, Trash2, Globe, DownloadCloud } from 'lucide-react';
+import { ChevronRight, ChevronDown, CheckCircle2, Loader2, Send, BookOpen, FlaskConical, Star, Lightbulb, Terminal, ArrowLeft, Save, RefreshCcw, Maximize2, ChevronLeft, Download, FileText, Zap, MessageCircle, Trash2, Globe, DownloadCloud, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LabView() {
@@ -35,6 +35,11 @@ export default function LabView() {
   // Download loading states
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingEpub, setDownloadingEpub] = useState(false);
+  
+  // Regenerate Lab State
+  const [showRegenerateModal, setShowRegenerateModal] = useState(false);
+  const [regenerateFeedback, setRegenerateFeedback] = useState('');
+  const [regenerating, setRegenerating] = useState(false);
   
   // Q&A State
   const [questions, setQuestions] = useState([]);
@@ -326,6 +331,35 @@ export default function LabView() {
     }, 2000);
   };
 
+  const handleRegenerateLab = async () => {
+    if (!regenerateFeedback.trim()) {
+      alert('Please provide feedback on what to improve.');
+      return;
+    }
+    setRegenerating(true);
+    try {
+      const res = await client.post(`/hands-on/${course.id}/labs/${currentLab.id}/regenerate`, {
+        feedback: regenerateFeedback
+      });
+      setCurrentLab(res.data);
+      setSuccessMsg('Lab regenerated successfully!');
+      setShowRegenerateModal(false);
+      setRegenerateFeedback('');
+      
+      // Parse steps
+      try {
+        const steps = JSON.parse(res.data.steps_json);
+        setLabSteps(Array.isArray(steps) ? steps : []);
+      } catch (e) {
+        setLabSteps([]);
+      }
+    } catch (err) {
+      alert('Failed to regenerate lab.');
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
   const completedSteps = labSteps.filter(s => s.is_completed).length;
   const totalSteps = labSteps.length;
 
@@ -355,7 +389,7 @@ export default function LabView() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`${
             isImmersiveMode ? 'w-full' : 'max-w-4xl mx-auto'
           }`}>
-            {/* Action Buttons: Favorite + Immersive Reader */}
+            {/* Action Buttons: Favorite + Immersive Reader + Regenerate */}
             <div className="flex justify-end mb-4 gap-3">
               <button
                 onClick={(e) => toggleFavorite(e, currentLab.path_in_index)}
@@ -386,6 +420,13 @@ export default function LabView() {
               >
                 <Maximize2 className="w-4 h-4" />
                 {isImmersiveMode ? 'Exit Immersive' : 'Immersive Reader'}
+              </button>
+              <button
+                onClick={() => setShowRegenerateModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+              >
+                <RefreshCcw className="w-4 h-4" />
+                Regenerate Lab
               </button>
             </div>
 
@@ -949,6 +990,58 @@ export default function LabView() {
           </div>
         </div>
       </div>
+
+      {/* Regenerate Modal */}
+      {showRegenerateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full p-8"
+          >
+            <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Regenerate Lab</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Please describe what you'd like to improve or change in this lab. The AI will regenerate the content based on your feedback.
+            </p>
+            <textarea
+              value={regenerateFeedback}
+              onChange={e => setRegenerateFeedback(e.target.value)}
+              placeholder="e.g., Add more practical examples, simplify the theory, include more command-line exercises..."
+              className="w-full h-40 p-4 border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition resize-none"
+              disabled={regenerating}
+            />
+            <div className="flex gap-4 mt-6 justify-end">
+              <button
+                onClick={() => {
+                  setShowRegenerateModal(false);
+                  setRegenerateFeedback('');
+                }}
+                disabled={regenerating}
+                className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition disabled:opacity-50"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleRegenerateLab}
+                disabled={regenerating || !regenerateFeedback.trim()}
+                className="px-6 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {regenerating ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Regenerating...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="w-5 h-5" />
+                    Rigenera
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

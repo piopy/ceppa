@@ -257,6 +257,56 @@ async def get_lab(
     return lab
 
 
+@router.post("/{course_id}/labs/{lab_id}/regenerate", response_model=hands_on_schema.LabOut)
+async def regenerate_lab(
+    course_id: int,
+    lab_id: int,
+    feedback: dict,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Regenerate a lab with user feedback.
+    """
+    # Verify course ownership
+    result = await db.execute(
+        select(HandsOnCourse).where(
+            HandsOnCourse.id == course_id,
+            HandsOnCourse.user_id == current_user.id,
+        )
+    )
+    course = result.scalars().first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Hands-on course not found")
+
+    # Get the lab
+    lab_result = await db.execute(
+        select(Lab).where(
+            Lab.id == lab_id,
+            Lab.hands_on_course_id == course_id,
+        )
+    )
+    lab = lab_result.scalars().first()
+    if not lab:
+        raise HTTPException(status_code=404, detail="Lab not found")
+
+    try:
+        user_feedback = feedback.get("feedback", "")
+        updated_lab = await HandsOnService.regenerate_lab(
+            db=db,
+            user=current_user,
+            lab=lab,
+            hands_on_course=course,
+            feedback=user_feedback,
+            use_web_research=False,
+        )
+        return updated_lab
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to regenerate lab: {str(e)}"
+        )
+
+
 @router.put("/{course_id}/labs/{lab_id}", response_model=hands_on_schema.LabOut)
 async def update_lab(
     course_id: int,
