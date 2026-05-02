@@ -127,12 +127,15 @@ class HandsOnService:
         db: AsyncSession,
         lab: Lab,
         is_completed: bool = None,
+        is_favorite: bool = None,
         user_notes: str = None,
         step_completed: int = None,
     ) -> Lab:
-        """Update lab progress (completion, notes, step status)."""
+        """Update lab progress (completion, favorite, notes, step status)."""
         if is_completed is not None:
             lab.is_completed = is_completed
+        if is_favorite is not None:
+            lab.is_favorite = is_favorite
         if user_notes is not None:
             lab.user_notes = user_notes
         if step_completed is not None:

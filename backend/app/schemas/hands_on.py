@@ -78,6 +78,7 @@ class LabOut(BaseModel):
     theory_content: str
     steps_json: str  # JSON string of LabStep[]
     is_completed: bool
+    is_favorite: bool = False
     user_notes: Optional[str]
     created_at: datetime
 
@@ -86,5 +87,26 @@ class LabOut(BaseModel):
 
 class LabUpdate(BaseModel):
     is_completed: Optional[bool] = None
+    is_favorite: Optional[bool] = None
     user_notes: Optional[str] = None
     step_completed: Optional[int] = None  # Mark a specific step as completed
+
+
+# ---- Lab Question Schemas ---- #
+
+class LabQuestionCreate(BaseModel):
+    question: str
+
+
+class LabQuestionOut(BaseModel):
+    id: int
+    lab_id: int
+    question: str
+    answer: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class GenerateAllLabsRequest(BaseModel):
+    use_web_research: bool = False

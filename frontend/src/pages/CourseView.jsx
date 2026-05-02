@@ -464,23 +464,49 @@ export default function CourseView() {
                     <CheckCircle2 className="w-5 h-5" />
                     {currentLesson.is_completed ? 'Completed' : 'Mark as Completed'}
                   </button>
-                  {currentLesson.id && (
+                   {currentLesson.id && (
                     <>
                       <button
-                        onClick={() => window.open(pdfDownloadUrl(currentLesson.id), '_blank')}
+                        onClick={async () => {
+                          try {
+                            const response = await client.get(`/lessons/${currentLesson.id}/pdf`, {
+                              responseType: 'blob'
+                            });
+                            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+                            window.open(url, '_blank');
+                            setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+                          } catch (err) {
+                            alert('Failed to load PDF. Please try again.');
+                          }
+                        }}
                         className="flex items-center gap-2 px-6 py-3 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-800 transition"
                       >
                         <FileText className="w-5 h-5" />
                         View PDF
                       </button>
-                      <a 
-                        href={pdfDownloadUrl(currentLesson.id)} 
-                        download
+                      <button
+                        onClick={async () => {
+                          try {
+                            const response = await client.get(`/lessons/${currentLesson.id}/pdf`, {
+                              responseType: 'blob'
+                            });
+                            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.setAttribute('download', `${currentLesson.title}.pdf`);
+                            document.body.appendChild(link);
+                            link.click();
+                            link.parentNode.removeChild(link);
+                            window.URL.revokeObjectURL(url);
+                          } catch (err) {
+                            alert('Failed to download PDF. Please try again.');
+                          }
+                        }}
                         className="flex items-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition"
                       >
                         <Download className="w-5 h-5" />
                         Download PDF
-                      </a>
+                      </button>
                     </>
                   )}
                 </div>

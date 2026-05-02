@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import client from '../api/client';
-import { Plus, FlaskConical, Clock, Loader2, Trash2, CheckCircle2, Play, ChevronDown, ChevronUp, Globe } from 'lucide-react';
+import { Plus, FlaskConical, Clock, Loader2, Trash2, CheckCircle2, Play, ChevronDown, ChevronUp, Globe, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+
+const PAGE_SIZE = 12;
 
 export default function HandsOnLabs() {
   const navigate = useNavigate();
@@ -17,18 +19,23 @@ export default function HandsOnLabs() {
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [tavilyCredits, setTavilyCredits] = useState(null);
+  
+  // Pagination state
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
     fetchCourses();
     fetchTavilyCredits();
-  }, []);
+  }, [page]);
 
   const fetchCourses = async () => {
     try {
       const res = await client.get('/hands-on/', {
-        params: { skip: 0, limit: 100 }
+        params: { skip: page * PAGE_SIZE, limit: PAGE_SIZE }
       });
       setCourses(res.data.items);
+      setTotal(res.data.total);
     } catch (err) {
       console.error(err);
     } finally {
@@ -61,6 +68,9 @@ export default function HandsOnLabs() {
       setCustomInstructions('');
       setShowCustomInstructions(false);
       setUseWebResearch(false);
+      // Navigate to the first page and reload list
+      setPage(0);
+      await fetchCourses();
       // Navigate to the newly created lab course
       navigate(`/labs/${res.data.id}`);
     } catch (err) {
@@ -88,6 +98,8 @@ export default function HandsOnLabs() {
   const handleNavigate = (courseId) => {
     navigate(`/labs/${courseId}`);
   };
+
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -215,60 +227,87 @@ export default function HandsOnLabs() {
             You haven't created any lab courses yet. Type a topic above to get started.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses.map((course, idx) => (
-              <motion.div
-                key={course.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="relative group"
-              >
-                <div 
-                  onClick={() => handleNavigate(course.id)}
-                  className={`block p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition border-2 cursor-pointer ${
-                    course.all_labs_completed 
-                      ? 'border-green-500 shadow-green-100' 
-                      : 'border-gray-100 dark:border-gray-700'
-                  }`}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {courses.map((course, idx) => (
+                <motion.div
+                  key={course.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="relative group"
                 >
-                  <h4 className="text-2xl font-bold mb-4 group-hover:text-orange-500 transition pr-8 dark:text-gray-100">{course.title}</h4>
-                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
-                    <Clock className="w-4 h-4" />
-                    <span>Created {new Date(course.created_at).toLocaleDateString()}</span>
-                  </div>
-                  {course.total_labs > 0 && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-orange-500 font-medium">{course.completed_labs}/{course.total_labs}</span>
-                      <span className="text-gray-400">labs completed</span>
-                    </div>
-                  )}
-                  {course.all_labs_completed && (
-                    <div className="mt-2 flex items-center gap-1 text-green-600 text-sm font-medium">
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>All labs completed!</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Delete Button */}
-                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 z-10">
-                  <button
-                    onClick={(e) => handleDeleteCourse(e, course.id)}
-                    disabled={deleting === course.id}
-                    className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50"
-                    title="Delete lab course"
+                  <div 
+                    onClick={() => handleNavigate(course.id)}
+                    className={`block p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition border-2 cursor-pointer ${
+                      course.all_labs_completed 
+                        ? 'border-green-500 shadow-green-100' 
+                        : 'border-gray-100 dark:border-gray-700'
+                    }`}
                   >
-                    {deleting === course.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-4 h-4" />
+                    <h4 className="text-2xl font-bold mb-4 group-hover:text-orange-500 transition pr-8 dark:text-gray-100">{course.title}</h4>
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                      <Clock className="w-4 h-4" />
+                      <span>Created {new Date(course.created_at).toLocaleDateString()}</span>
+                    </div>
+                    {course.total_labs > 0 && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-orange-500 font-medium">{course.completed_labs}/{course.total_labs}</span>
+                        <span className="text-gray-400">labs completed</span>
+                      </div>
                     )}
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                    {course.all_labs_completed && (
+                      <div className="mt-2 flex items-center gap-1 text-green-600 text-sm font-medium">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>All labs completed!</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Delete Button */}
+                  <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 z-10">
+                    <button
+                      onClick={(e) => handleDeleteCourse(e, course.id)}
+                      disabled={deleting === course.id}
+                      className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50"
+                      title="Delete lab course"
+                    >
+                      {deleting === course.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 mt-10">
+                <button
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="flex items-center gap-1 px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-750 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+                <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                  Page {page + 1} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                  className="flex items-center gap-1 px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-750 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>

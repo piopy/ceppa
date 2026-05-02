@@ -261,6 +261,79 @@ class LLMService:
         return response.choices[0].message.content.strip()
 
     @staticmethod
+    async def answer_lab_question(
+        lab_title: str,
+        lab_theory: str,
+        lab_steps: str,
+        question: str,
+        language: str = "en",
+        user=None,
+    ) -> str:
+        """
+        Answer a user question about a specific lab using lab context.
+        """
+        lang_instruction = LLMService._get_language_instruction(language)
+
+        # Truncate context to avoid token limits
+        truncated_theory = (
+            lab_theory[:3000] if len(lab_theory) > 3000 else lab_theory
+        )
+        truncated_steps = (
+            lab_steps[:2000] if len(lab_steps) > 2000 else lab_steps
+        )
+
+        # Get web context for questions
+        web_context = ""
+        from app.services.tavily_service import TavilyService
+
+        tavily = TavilyService.for_user(user)
+        web_context_result = await tavily.search_for_question_context(
+            question, truncated_theory[:1000], language
+        )
+        if web_context_result:
+            web_context = web_context_result
+
+        prompt = f"""
+        You are a helpful teaching assistant for a hands-on lab course. 
+        A student is working on the lab "{lab_title}".
+        {lang_instruction}
+
+        Here is the lab theory content:
+        ---
+        {truncated_theory}
+        ---
+
+        Here are the practical steps:
+        ---
+        {truncated_steps}
+        ---
+
+        {web_context}
+
+        The student asks: "{question}"
+
+        Provide a clear, educational answer based on the lab content and any current web information provided above.
+        Focus on practical guidance and helping the student complete the lab exercises.
+        If the question is not related to the lab topic, politely redirect them to ask questions about the lab.
+        Keep your answer concise (2-3 paragraphs maximum).
+        Use markdown formatting where appropriate.
+        
+        IMPORTANT CITATION RULES:
+        - If you used web sources to answer, add a "**Fonti:**" section at the END of your answer
+        - List each source used with format: [Title](URL)
+        - Only cite sources you actually used in your answer
+        - If no web sources were used, don't add the Fonti section
+        """
+
+        response = await _get_client(user).chat.completions.create(
+            model=_get_model(user),
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+        )
+
+        return response.choices[0].message.content.strip()
+
+    @staticmethod
     async def generate_hands_on_course_index(
         topic: str,
         instructions: str = None,

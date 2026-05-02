@@ -98,7 +98,20 @@ class Lab(Base):
     theory_content = Column(Text)  # The 30% theory markdown
     steps_json = Column(Text)  # JSON array of practical steps (70%)
     is_completed = Column(Boolean, default=False)
+    is_favorite = Column(Boolean, default=False)
     user_notes = Column(Text, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     hands_on_course = relationship("HandsOnCourse", back_populates="labs")
+    questions = relationship("LabQuestion", back_populates="lab", cascade="all, delete-orphan")
+
+
+class LabQuestion(Base):
+    __tablename__ = "lab_questions"
+    id = Column(Integer, primary_key=True, index=True)
+    lab_id = Column(Integer, ForeignKey("labs.id"), nullable=False)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+    lab = relationship("Lab", back_populates="questions")
