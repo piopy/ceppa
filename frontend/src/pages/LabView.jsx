@@ -35,6 +35,8 @@ export default function LabView() {
   // Download loading states
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingEpub, setDownloadingEpub] = useState(false);
+  const [viewingLabPdf, setViewingLabPdf] = useState(false);
+  const [downloadingLabPdf, setDownloadingLabPdf] = useState(false);
   
   // Regenerate Lab State
   const [showRegenerateModal, setShowRegenerateModal] = useState(false);
@@ -600,6 +602,7 @@ export default function LabView() {
                   <>
                     <button
                       onClick={async () => {
+                        setViewingLabPdf(true);
                         try {
                           const response = await client.get(`/hands-on/${courseId}/labs/${currentLab.id}/pdf`, {
                             responseType: 'blob'
@@ -609,15 +612,19 @@ export default function LabView() {
                           setTimeout(() => window.URL.revokeObjectURL(url), 60000);
                         } catch (err) {
                           alert('Failed to load PDF. Please try again.');
+                        } finally {
+                          setViewingLabPdf(false);
                         }
                       }}
-                      className="flex items-center gap-2 px-6 py-3 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-800 transition"
+                      disabled={viewingLabPdf}
+                      className="flex items-center gap-2 px-6 py-3 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-800 transition disabled:opacity-50"
                     >
-                      <FileTextIcon className="w-5 h-5" />
-                      View PDF
+                      {viewingLabPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileTextIcon className="w-5 h-5" />}
+                      {viewingLabPdf ? 'Generating PDF...' : 'View PDF'}
                     </button>
                     <button
                       onClick={async () => {
+                        setDownloadingLabPdf(true);
                         try {
                           const response = await client.get(`/hands-on/${courseId}/labs/${currentLab.id}/pdf`, {
                             responseType: 'blob'
@@ -632,12 +639,15 @@ export default function LabView() {
                           window.URL.revokeObjectURL(url);
                         } catch (err) {
                           alert('Failed to download PDF. Please try again.');
+                        } finally {
+                          setDownloadingLabPdf(false);
                         }
                       }}
-                      className="flex items-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                      disabled={downloadingLabPdf}
+                      className="flex items-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition disabled:opacity-50"
                     >
-                      <Download className="w-5 h-5" />
-                      Download PDF
+                      {downloadingLabPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                      {downloadingLabPdf ? 'Generating PDF...' : 'Download PDF'}
                     </button>
                   </>
                 )}

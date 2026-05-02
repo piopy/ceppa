@@ -77,6 +77,7 @@ class LabOut(BaseModel):
     path_in_index: str
     theory_content: str
     steps_json: str  # JSON string of LabStep[]
+    pdf_path: Optional[str] = None
     is_completed: bool
     is_favorite: bool = False
     user_notes: Optional[str]

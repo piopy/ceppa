@@ -97,6 +97,7 @@ class Lab(Base):
     path_in_index = Column(String)  # e.g., "1.1", "2.3"
     theory_content = Column(Text)  # The 30% theory markdown
     steps_json = Column(Text)  # JSON array of practical steps (70%)
+    pdf_path = Column(String, nullable=True)  # Path to PDF file
     is_completed = Column(Boolean, default=False)
     is_favorite = Column(Boolean, default=False)
     user_notes = Column(Text, nullable=True)

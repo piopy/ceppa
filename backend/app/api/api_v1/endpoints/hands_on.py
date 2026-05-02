@@ -266,6 +266,7 @@ async def get_lab_pdf(
 ) -> Any:
     """
     Get a single lab's content as PDF.
+    Caches the generated PDF path in the database.
     """
     # Verify course ownership
     result = await db.execute(
@@ -291,6 +292,16 @@ async def get_lab_pdf(
 
     if not lab.theory_content and not lab.steps_json:
         raise HTTPException(status_code=400, detail="Lab has no content to generate PDF from")
+
+    # Check if PDF is already cached
+    if lab.pdf_path:
+        pdf_full_path = PDFService.BASE_DIR / lab.pdf_path
+        if pdf_full_path.exists():
+            return FileResponse(
+                path=str(pdf_full_path),
+                media_type="application/pdf",
+                filename=f"{PDFService._sanitize_filename(lab.title)}.pdf",
+            )
 
     # Build markdown content for this lab
     md_parts = [f"# {lab.title}\n\n"]
@@ -323,6 +334,10 @@ async def get_lab_pdf(
 
     if not pdf_path:
         raise HTTPException(status_code=500, detail="Failed to generate PDF")
+
+    # Cache the pdf_path in DB
+    lab.pdf_path = pdf_path
+    await db.commit()
 
     # Return file
     full_path = PDFService.BASE_DIR / pdf_path
