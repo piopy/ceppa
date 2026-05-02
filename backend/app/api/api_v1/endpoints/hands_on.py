@@ -257,6 +257,85 @@ async def get_lab(
     return lab
 
 
+@router.get("/{course_id}/labs/{lab_id}/pdf")
+async def get_lab_pdf(
+    course_id: int,
+    lab_id: int,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """
+    Get a single lab's content as PDF.
+    """
+    # Verify course ownership
+    result = await db.execute(
+        select(HandsOnCourse).where(
+            HandsOnCourse.id == course_id,
+            HandsOnCourse.user_id == current_user.id,
+        )
+    )
+    course = result.scalars().first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Hands-on course not found")
+
+    # Get the lab
+    lab_result = await db.execute(
+        select(Lab).where(
+            Lab.id == lab_id,
+            Lab.hands_on_course_id == course_id,
+        )
+    )
+    lab = lab_result.scalars().first()
+    if not lab:
+        raise HTTPException(status_code=404, detail="Lab not found")
+
+    if not lab.theory_content and not lab.steps_json:
+        raise HTTPException(status_code=400, detail="Lab has no content to generate PDF from")
+
+    # Build markdown content for this lab
+    md_parts = [f"# {lab.title}\n\n"]
+
+    if lab.theory_content:
+        md_parts.append("## Theory Background\n\n")
+        md_parts.append(lab.theory_content)
+        md_parts.append("\n\n")
+
+    if lab.steps_json:
+        md_parts.append("## Practical Steps\n\n")
+        try:
+            steps = json.loads(lab.steps_json)
+            for step in steps:
+                md_parts.append(f"### Step {step['step_number']}: {step['title']}\n\n")
+                md_parts.append(f"{step['description']}\n\n")
+                if step.get('command'):
+                    md_parts.append(f"```bash\n{step['command']}\n```\n\n")
+                if step.get('expected_output'):
+                    md_parts.append(f"**Expected output:**\n```\n{step['expected_output']}\n```\n\n")
+        except json.JSONDecodeError:
+            md_parts.append(f"{lab.steps_json}\n\n")
+
+    content_md = "".join(md_parts)
+
+    # Generate PDF
+    pdf_path = await PDFService.convert_markdown_to_pdf(
+        content_md, current_user.id, course.title, lab.title
+    )
+
+    if not pdf_path:
+        raise HTTPException(status_code=500, detail="Failed to generate PDF")
+
+    # Return file
+    full_path = PDFService.BASE_DIR / pdf_path
+    if not full_path.exists():
+        raise HTTPException(status_code=404, detail="Generated PDF file not found")
+
+    return FileResponse(
+        path=str(full_path),
+        media_type="application/pdf",
+        filename=f"{PDFService._sanitize_filename(lab.title)}.pdf",
+    )
+
+
 @router.post("/{course_id}/labs/{lab_id}/regenerate", response_model=hands_on_schema.LabOut)
 async def regenerate_lab(
     course_id: int,

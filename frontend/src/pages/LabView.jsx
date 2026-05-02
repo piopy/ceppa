@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ChevronRight, ChevronDown, CheckCircle2, Loader2, Send, BookOpen, FlaskConical, Star, Lightbulb, Terminal, ArrowLeft, Save, RefreshCcw, Maximize2, ChevronLeft, Download, FileText, Zap, MessageCircle, Trash2, Globe, DownloadCloud, RotateCcw } from 'lucide-react';
+import { ChevronRight, ChevronDown, CheckCircle2, Loader2, Send, BookOpen, FlaskConical, Star, Lightbulb, Terminal, ArrowLeft, Save, RefreshCcw, Maximize2, ChevronLeft, Download, FileText, Zap, MessageCircle, Trash2, Globe, DownloadCloud, RotateCcw, FileText as FileTextIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LabView() {
@@ -587,7 +587,7 @@ export default function LabView() {
                   You have unsaved changes
                 </p>
               )}
-              <div className="mt-4 flex items-center gap-4">
+              <div className="mt-4 flex items-center gap-4 flex-wrap">
                 <button 
                   onClick={handleSaveNotes}
                   disabled={savingNotes || notes === (currentLab.user_notes || '')}
@@ -596,6 +596,51 @@ export default function LabView() {
                   {savingNotes ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                   Save Notes
                 </button>
+                {currentLab.id && (
+                  <>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const response = await client.get(`/hands-on/${courseId}/labs/${currentLab.id}/pdf`, {
+                            responseType: 'blob'
+                          });
+                          const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+                          window.open(url, '_blank');
+                          setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+                        } catch (err) {
+                          alert('Failed to load PDF. Please try again.');
+                        }
+                      }}
+                      className="flex items-center gap-2 px-6 py-3 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-800 transition"
+                    >
+                      <FileTextIcon className="w-5 h-5" />
+                      View PDF
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const response = await client.get(`/hands-on/${courseId}/labs/${currentLab.id}/pdf`, {
+                            responseType: 'blob'
+                          });
+                          const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.setAttribute('download', `${currentLab.title}.pdf`);
+                          document.body.appendChild(link);
+                          link.click();
+                          link.parentNode.removeChild(link);
+                          window.URL.revokeObjectURL(url);
+                        } catch (err) {
+                          alert('Failed to download PDF. Please try again.');
+                        }
+                      }}
+                      className="flex items-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                    >
+                      <Download className="w-5 h-5" />
+                      Download PDF
+                    </button>
+                  </>
+                )}
                 {successMsg && <span className="text-green-600 font-medium">{successMsg}</span>}
               </div>
             </section>
