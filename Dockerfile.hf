@@ -20,7 +20,7 @@ WORKDIR /app
 
 # Argomenti per il repository Git (sovrascrivibili in fase di build, o settabili qui)
 ARG GIT_REPO_URL="https://github.com/piopy/ceppa.git"
-ARG GIT_BRANCH="feature/nice-to-have-list"
+ARG GIT_BRANCH="feature/hands-on-labs"
 
 # Installa git, clona il repository (usando le variabili) e posizionati nella cartella frontend
 RUN apk add --no-cache git \
@@ -168,10 +168,7 @@ nginx
 
 # Avvia Uvicorn in un ambiente pulito: rimuove OPENAI_API_KEY e credenziali Google
 # dall'ambiente del processo, così la libreria openai usa SOLO l'api_key esplicita.
-exec env -u OPENAI_API_KEY -u OPENAI_BASE_URL \
-    -u GOOGLE_API_KEY -u GOOGLE_APPLICATION_CREDENTIALS \
-    -u GOOGLE_CLOUD_PROJECT -u GCLOUD_PROJECT \
-    NO_GCE_CHECK=true PYTHONDONTWRITEBYTECODE=1 \
+exec env -u OPENAI_API_KEY -u OPENAI_BASE_URL -u GOOGLE_API_KEY -u GOOGLE_APPLICATION_CREDENTIALS \
     uvicorn app.main:app --host 127.0.0.1 --port 8000
 EOF
 
