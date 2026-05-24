@@ -72,10 +72,9 @@ ENV LLM_MODEL=gemini-3-flash-preview \
     DEFAULT_LANGUAGE=it \
     MAX_CONCURRENT_WORKERS=3
 
-# Installa curl e libpq5 (dipendenza runtime di asyncpg)
+# Installa solo curl (per healthcheck/debug)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
 # Crea le directory necessarie con permessi per uid 1000 (HF Spaces non-root)
