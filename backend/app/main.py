@@ -41,4 +41,4 @@ def read_root():
     return {"message": "Welcome to Ceppa.ai API"}
 
 # Serve frontend static files (after all API routes so they take priority)
-app.mount("/", StaticFiles(directory="/var/www/html", html=True), name="frontend")
+# app.mount("/", StaticFiles(directory="/var/www/html", html=True), name="frontend")
