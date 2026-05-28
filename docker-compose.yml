@@ -1,7 +1,7 @@
 services:
   backend:
     build: ./backend
-    container_name: ceppa-backend
+    container_name: ${PROJECT_NAME}-backend
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
@@ -20,7 +20,7 @@ services:
 
   frontend:
     build: ./frontend
-    container_name: ceppa-frontend
+    container_name: ${PROJECT_NAME}-frontend
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     volumes:
@@ -37,7 +37,7 @@ services:
 
   db:
     image: postgres:15-alpine
-    container_name: ceppa-db
+    container_name: ${PROJECT_NAME}-db
     env_file:
       - envs/${ENV_MODE}.env
     ports:
@@ -55,4 +55,5 @@ volumes:
 
 networks:
   ceppa_network:
-    driver: bridge
+    name: ${DOCKER_NETWORK_NAME:-ceppa_network}
+    external: ${DOCKER_NETWORK_EXTERNAL:-false}
