@@ -2,7 +2,7 @@
 
 ## Current version - Bugfix
 
-- [ ] On HuggingFace: "Registration failed. Username might be taken." After first registration (no users on db) (maybe db connection fault?)
+- [x] On HuggingFace: "Registration failed. Username might be taken." After first registration (no users on db) (maybe db connection fault?)
 
 ## v0.2.1 — Migrazioni DB con Alembic
 
@@ -13,7 +13,7 @@
 - [x] Aggiungere `alembic upgrade head` nello script di avvio (`start.sh`) **prima** di `uvicorn`
 - [x] **`DATABASE_URL` auto-costruito se assente** da variabili `POSTGRES_*`
 - [x] Attesa DB attivo (TCP check, max 60s) prima di alembic + uvicorn
-- [ ] Testare su Hugging Face Spaces
+- [x] Testare su Hugging Face Spaces
 
 ## v0.3.0 — Import/Export Lezioni Utente
 

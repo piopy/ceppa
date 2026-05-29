@@ -59,6 +59,10 @@ RUN poetry config virtualenvs.create false \
 # Copia il codice del backend
 COPY backend/app ./app
 
+# Copia Alembic per le migrazioni DB
+COPY backend/alembic.ini .
+COPY backend/migrations ./migrations
+
 # ==========================================
 # STAGE 3: Immagine Finale (Python + FastAPI)
 # ==========================================

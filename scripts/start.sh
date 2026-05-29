@@ -49,10 +49,27 @@ done
 # ── Applica migrazioni DB ─────────────────────────────────────────────────────
 cd /app/backend
 echo "[start.sh] Eseguo alembic upgrade head..."
-DATABASE_URL="$DATABASE_URL" \
+set +e
+ALEMBIC_OUTPUT=$(DATABASE_URL="$DATABASE_URL" \
     OPENAI_API_KEY="${OPENAI_API_KEY:-dummy}" \
     OPENAI_BASE_URL="${OPENAI_BASE_URL:-https://dummy}" \
-    alembic upgrade head
+    alembic upgrade head 2>&1)
+ALEMBIC_EXIT_CODE=$?
+set -e
+if [ $ALEMBIC_EXIT_CODE -ne 0 ]; then
+    if echo "$ALEMBIC_OUTPUT" | grep -qi "already exists"; then
+        echo "[start.sh] Tabelle già esistenti, eseguo alembic stamp head..."
+        DATABASE_URL="$DATABASE_URL" \
+            OPENAI_API_KEY="${OPENAI_API_KEY:-dummy}" \
+            OPENAI_BASE_URL="${OPENAI_BASE_URL:-https://dummy}" \
+            alembic stamp head
+        echo "[start.sh] Head stampato con successo."
+    else
+        echo "[start.sh] ERRORE: Migrazione DB fallita:" >&2
+        echo "$ALEMBIC_OUTPUT" >&2
+        exit 1
+    fi
+fi
 echo "[start.sh] Migrazioni completate."
 
 # ── Avvia Uvicorn in ambiente pulito ─────────────────────────────────────────
