@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -158,7 +159,8 @@ async def export_user_data(
     )
 
     json_bytes = export_data.model_dump_json(indent=2).encode("utf-8")
-    filename = f"ceppa_export_{current_user.username}.json"
+    safe_username = re.sub(r'[^\w.-]', '_', current_user.username)
+    filename = f"ceppa_export_{safe_username}.json"
 
     return Response(
         content=json_bytes,
