@@ -15,7 +15,14 @@ export default function Register() {
       await register(username, password);
       navigate('/');
     } catch (err) {
-      setError('Registration failed. Username might be taken.');
+      const detail = err?.response?.data?.detail;
+      if (detail && detail.toLowerCase().includes('already exists')) {
+        setError('Username already taken. Please choose another.');
+      } else if (detail) {
+        setError(`Registration failed: ${detail}`);
+      } else {
+        setError('Registration failed. Please try again later.');
+      }
     }
   };
 
