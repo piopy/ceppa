@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import client from '../api/client';
-import { Save, ArrowLeft, Key, Server, Bot, Search, Loader2, Eye, EyeOff } from 'lucide-react';
+import client, { exportUserData, importUserData } from '../api/client';
+import { Save, ArrowLeft, Key, Server, Bot, Search, Loader2, Eye, EyeOff, Download, Upload } from 'lucide-react';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -20,6 +20,12 @@ export default function Profile() {
   // Visibility toggles for sensitive fields
   const [showApiKey, setShowApiKey] = useState(false);
   const [showTavilyKey, setShowTavilyKey] = useState(false);
+
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importResult, setImportResult] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchSettings();
@@ -194,6 +200,107 @@ export default function Profile() {
             >
               {showTavilyKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Data Export/Import */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Download className="w-5 h-5 text-primary" />
+          Data Export / Import
+        </h2>
+
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              Export all your courses, labs, Q&amp;A history, and progress as a JSON file for backup or migration.
+            </p>
+            <button
+              onClick={async () => {
+                setExporting(true);
+                try {
+                  await exportUserData();
+                } catch (err) {
+                  console.error('Export failed:', err);
+                  setErrorMsg('Export failed: ' + (err.response?.data?.detail || err.message));
+                } finally {
+                  setExporting(false);
+                }
+              }}
+              disabled={exporting}
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition disabled:opacity-50"
+            >
+              {exporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              {exporting ? 'Exporting...' : 'Export All Data'}
+            </button>
+          </div>
+
+          <hr className="border-gray-200 dark:border-gray-700" />
+
+          <div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              Import data from a previous export file. This will add courses and labs to your existing data.
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={(e) => {
+                  setImportFile(e.target.files[0] || null);
+                  setImportResult(null);
+                  setErrorMsg('');
+                }}
+                className="block text-sm text-gray-600 dark:text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 dark:file:bg-gray-700 file:text-gray-700 dark:file:text-gray-300 hover:file:bg-gray-200 dark:hover:file:bg-gray-600 transition"
+              />
+              <button
+                onClick={async () => {
+                  if (!importFile) return;
+                  setImporting(true);
+                  setImportResult(null);
+                  setErrorMsg('');
+                  try {
+                    const result = await importUserData(importFile);
+                    setImportResult(result);
+                    setImportFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                } catch (err) {
+                  console.error('Import failed:', err);
+                  const detail = err.response?.data?.detail;
+                  const msg = Array.isArray(detail)
+                    ? detail.map(d => d.msg || JSON.stringify(d)).join('; ')
+                    : detail || err.message;
+                  setErrorMsg('Import failed: ' + msg);
+                  } finally {
+                    setImporting(false);
+                  }
+                }}
+                disabled={importing || !importFile}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition disabled:opacity-50"
+              >
+                {importing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                {importing ? 'Importing...' : 'Import'}
+              </button>
+            </div>
+            {importResult && (
+              <div className="mt-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <p className="text-sm text-green-700 dark:text-green-300">
+                  Import completed: {importResult.courses_imported} course{importResult.courses_imported !== 1 ? 's' : ''},{' '}
+                  {importResult.lessons_imported} lesson{importResult.lessons_imported !== 1 ? 's' : ''},{' '}
+                  {importResult.hands_on_courses_imported} lab course{importResult.hands_on_courses_imported !== 1 ? 's' : ''},{' '}
+                  {importResult.labs_imported} lab{importResult.labs_imported !== 1 ? 's' : ''} imported.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
