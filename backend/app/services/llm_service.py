@@ -261,6 +261,248 @@ class LLMService:
         return response.choices[0].message.content.strip()
 
     @staticmethod
+    async def answer_lab_question(
+        lab_title: str,
+        lab_theory: str,
+        lab_steps: str,
+        question: str,
+        language: str = "en",
+        user=None,
+    ) -> str:
+        """
+        Answer a user question about a specific lab using lab context.
+        """
+        lang_instruction = LLMService._get_language_instruction(language)
+
+        # Truncate context to avoid token limits
+        truncated_theory = (
+            lab_theory[:3000] if len(lab_theory) > 3000 else lab_theory
+        )
+        truncated_steps = (
+            lab_steps[:2000] if len(lab_steps) > 2000 else lab_steps
+        )
+
+        # Get web context for questions
+        web_context = ""
+        from app.services.tavily_service import TavilyService
+
+        tavily = TavilyService.for_user(user)
+        web_context_result = await tavily.search_for_question_context(
+            question, truncated_theory[:1000], language
+        )
+        if web_context_result:
+            web_context = web_context_result
+
+        prompt = f"""
+        You are a helpful teaching assistant for a hands-on lab course. 
+        A student is working on the lab "{lab_title}".
+        {lang_instruction}
+
+        Here is the lab theory content:
+        ---
+        {truncated_theory}
+        ---
+
+        Here are the practical steps:
+        ---
+        {truncated_steps}
+        ---
+
+        {web_context}
+
+        The student asks: "{question}"
+
+        Provide a clear, educational answer based on the lab content and any current web information provided above.
+        Focus on practical guidance and helping the student complete the lab exercises.
+        If the question is not related to the lab topic, politely redirect them to ask questions about the lab.
+        Keep your answer concise (2-3 paragraphs maximum).
+        Use markdown formatting where appropriate.
+        
+        IMPORTANT CITATION RULES:
+        - If you used web sources to answer, add a "**Fonti:**" section at the END of your answer
+        - List each source used with format: [Title](URL)
+        - Only cite sources you actually used in your answer
+        - If no web sources were used, don't add the Fonti section
+        """
+
+        response = await _get_client(user).chat.completions.create(
+            model=_get_model(user),
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+        )
+
+        return response.choices[0].message.content.strip()
+
+    @staticmethod
+    async def generate_hands_on_course_index(
+        topic: str,
+        instructions: str = None,
+        language: str = "en",
+        use_web_research: bool = False,
+        user=None,
+    ) -> str:
+        """
+        Generate a course index for hands-on/lab courses (30% theory, 70% practice).
+        """
+        lang_instruction = LLMService._get_language_instruction(language)
+
+        web_context = ""
+        if use_web_research:
+            from app.services.tavily_service import TavilyService
+
+            tavily = TavilyService.for_user(user)
+            web_context_result = await tavily.search_for_course_context(topic, language)
+            if web_context_result:
+                web_context = web_context_result
+
+        prompt = f"""
+        Act as an expert hands-on instructor. Create a comprehensive LABORATORY course syllabus for: "{topic}".
+        {lang_instruction}
+
+        {web_context}
+
+        {f"Additional User Instructions: {instructions}" if instructions else ""}
+
+        IMPORTANT: This is a HANDS-ON / LAB course. Each module should follow the 30/70 rule:
+        - 30% theory (minimal required concepts)
+        - 70% practice (hands-on exercises, real-world labs, coding challenges, practical experiments)
+
+        The output MUST be a valid JSON array of Modules. Each Module has a "title" and a list of "labs".
+        Each lab has a "title", "path" (hierarchical number), and "type" which can be "theory" or "lab".
+        Mix theory and lab types throughout the modules to create the 30/70 balance.
+
+        Example JSON format:
+        [
+            {{
+                "title": "Module 1: Getting Started",
+                "labs": [
+                    {{"title": "Core Concepts of {topic}", "path": "1.1", "type": "theory"}},
+                    {{"title": "Lab: First Hands-on Exercise", "path": "1.2", "type": "lab"}},
+                    {{"title": "Lab: Real-world Scenario", "path": "1.3", "type": "lab"}}
+                ]
+            }},
+            {{
+                "title": "Module 2: Advanced Practice",
+                "labs": [
+                    {{"title": "Key Theory for Advanced Topics", "path": "2.1", "type": "theory"}},
+                    {{"title": "Lab: Complex Implementation", "path": "2.2", "type": "lab"}},
+                    {{"title": "Lab: Challenge Exercise", "path": "2.3", "type": "lab"}}
+                ]
+            }}
+        ]
+
+        Provide ONLY the JSON output. Do not include markdown formatting (like ```json), just the raw JSON.
+        Make the course deeply practical with real exercises the student can actually perform.
+        """
+
+        response = await _get_client(user).chat.completions.create(
+            model=_get_model(user),
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+        )
+
+        content = response.choices[0].message.content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+
+        return content.strip()
+
+    @staticmethod
+    async def generate_lab_content(
+        topic: str,
+        lab_title: str,
+        context_index: str,
+        language: str = "en",
+        use_web_research: bool = False,
+        user=None,
+    ) -> str:
+        """
+        Generate a lab session with 30% theory and 70% practical steps.
+        Returns a JSON with theory_content (markdown) and steps (array of practical steps).
+        """
+        lang_instruction = LLMService._get_language_instruction(language).replace(
+            "Respond", "Write the lab"
+        )
+
+        web_context = ""
+        if use_web_research:
+            from app.services.tavily_service import TavilyService
+
+            tavily = TavilyService.for_user(user)
+            web_context_result = await tavily.search_for_lesson_context(
+                topic, lab_title, language
+            )
+            if web_context_result:
+                web_context = web_context_result
+
+        prompt = f"""
+        Act as an expert hands-on instructor. Create a practical LAB session for the course "{topic}" on: "{lab_title}".
+        {lang_instruction}
+
+        Course context:
+        {context_index}
+
+        {web_context}
+
+        IMPORTANT: Follow the 30/70 RULE:
+        - 30% theory: concise, just enough to understand the practical work
+        - 70% practice: detailed step-by-step exercises the student can actually perform
+
+        Output your response as a VALID JSON object with two fields:
+        1. "theory_content": String — Markdown content for the theory part (concise, max 30% of total)
+        2. "steps": Array of objects — Each step has: step_number (int), title (str), description (str), command (str or null for optional terminal command), expected_output (str or null), hints (array of strings or null)
+        
+        Include 5-8 practical steps minimum. Make each step actionable and concrete.
+        For each step, if a terminal command or code snippet is needed, put it in "command".
+        
+        Example JSON output:
+        {{
+            "theory_content": "# {lab_title}\\n\\nThis lab covers the practical application of... (concise theory)",
+            "steps": [
+                {{
+                    "step_number": 1,
+                    "title": "Setup the Environment",
+                    "description": "Create a new project directory and initialize...",
+                    "command": "mkdir lab-project && cd lab-project",
+                    "expected_output": "Directory created successfully",
+                    "hints": ["Make sure you're in your home directory first"]
+                }},
+                {{
+                    "step_number": 2,
+                    "title": "Configure Dependencies",
+                    "description": "Install the required packages...",
+                    "command": "pip install -r requirements.txt",
+                    "expected_output": "All packages installed successfully",
+                    "hints": null
+                }}
+            ]
+        }}
+
+        Provide ONLY the JSON output. No markdown formatting. No extra text.
+        Make sure the steps are realistic and the commands are correct for the topic.
+        """
+
+        response = await _get_client(user).chat.completions.create(
+            model=_get_model(user),
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+        )
+
+        content = response.choices[0].message.content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+
+        return content.strip()
+
+    @staticmethod
     async def answer_lesson_question(
         lesson_title: str,
         lesson_content: str,

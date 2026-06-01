@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Book, PlusCircle, Home, Github, ChevronLeft, ChevronRight, Moon, Sun, Settings } from 'lucide-react';
+import { LogOut, Book, PlusCircle, Home, Github, ChevronLeft, ChevronRight, Moon, Sun, Settings, FlaskConical } from 'lucide-react';
 import versionData from '../version.json';
 import { useState, useEffect } from 'react';
 
@@ -76,6 +76,10 @@ export default function Layout() {
           <Link to="/" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 dark:hover:bg-white/5 transition">
             <Home className="w-5 h-5" />
             Dashboard
+          </Link>
+          <Link to="/labs" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 dark:hover:bg-white/5 transition">
+            <FlaskConical className="w-5 h-5 text-orange-400" />
+            Hands-on Labs
           </Link>
         </nav>
 
