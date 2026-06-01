@@ -39,13 +39,16 @@ export default function CourseView() {
   // Download loading states
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingEpub, setDownloadingEpub] = useState(false);
+  const [viewingPdf, setViewingPdf] = useState(false);
+  const [downloadingSinglePdf, setDownloadingSinglePdf] = useState(false);
   
   // Notes saving state
   const [savingNotes, setSavingNotes] = useState(false);
   
-  // Get the base URL for media files
+  // Get the base URL for API calls (used as fallback)
   const API_BASE_URL = client.defaults.baseURL.replace('/api/v1', '');
   const MEDIA_URL = `${API_BASE_URL}/media`;
+  const pdfDownloadUrl = (lessonId) => `${API_BASE_URL}/api/v1/lessons/${lessonId}/pdf`;
 
   useEffect(() => {
     fetchCourse();
@@ -463,23 +466,57 @@ export default function CourseView() {
                     <CheckCircle2 className="w-5 h-5" />
                     {currentLesson.is_completed ? 'Completed' : 'Mark as Completed'}
                   </button>
-                  {currentLesson.pdf_path && (
+                   {currentLesson.id && (
                     <>
                       <button
-                        onClick={() => window.open(`${MEDIA_URL}/${currentLesson.pdf_path}`, '_blank')}
-                        className="flex items-center gap-2 px-6 py-3 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-800 transition"
+                        onClick={async () => {
+                          setViewingPdf(true);
+                          try {
+                            const response = await client.get(`/lessons/${currentLesson.id}/pdf`, {
+                              responseType: 'blob'
+                            });
+                            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+                            window.open(url, '_blank');
+                            setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+                          } catch (err) {
+                            alert('Failed to load PDF. Please try again.');
+                          } finally {
+                            setViewingPdf(false);
+                          }
+                        }}
+                        disabled={viewingPdf}
+                        className="flex items-center gap-2 px-6 py-3 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-800 transition disabled:opacity-50"
                       >
-                        <FileText className="w-5 h-5" />
-                        View PDF
+                        {viewingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
+                        {viewingPdf ? 'Generating PDF...' : 'View PDF'}
                       </button>
-                      <a 
-                        href={`${MEDIA_URL}/${currentLesson.pdf_path}`} 
-                        download
-                        className="flex items-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                      <button
+                        onClick={async () => {
+                          setDownloadingSinglePdf(true);
+                          try {
+                            const response = await client.get(`/lessons/${currentLesson.id}/pdf`, {
+                              responseType: 'blob'
+                            });
+                            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.setAttribute('download', `${currentLesson.title}.pdf`);
+                            document.body.appendChild(link);
+                            link.click();
+                            link.parentNode.removeChild(link);
+                            window.URL.revokeObjectURL(url);
+                          } catch (err) {
+                            alert('Failed to download PDF. Please try again.');
+                          } finally {
+                            setDownloadingSinglePdf(false);
+                          }
+                        }}
+                        disabled={downloadingSinglePdf}
+                        className="flex items-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition disabled:opacity-50"
                       >
-                        <Download className="w-5 h-5" />
-                        Download PDF
-                      </a>
+                        {downloadingSinglePdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                        {downloadingSinglePdf ? 'Generating PDF...' : 'Download PDF'}
+                      </button>
                     </>
                   )}
                 </div>

@@ -5,7 +5,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pandoc \
     texlive-latex-base \
     texlive-fonts-recommended \
-    texlive-latex-extra \
     texlive-xetex \
     lmodern \
     curl \
@@ -25,12 +24,11 @@ WORKDIR /app
 # Copy dependency files
 COPY pyproject.toml poetry.lock* /app/
 
-# Install dependencies (configured to not create a virtualenv inside the container for simplicity in dev)
+# Install dependencies (configured to not create a virtualenv inside the container)
 RUN poetry config virtualenvs.create false \
     && poetry install --no-root --no-interaction --no-ansi
 
-# We don't copy the code here because we volume map it in docker-compose
-# But we need pyproject.toml to be present to install deps if we were building for prod.
-# For dev, we'll install in the command or check. For now, we assume pyproject exists.
+# Copy the rest of the backend code
+COPY ./app /app/app
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
