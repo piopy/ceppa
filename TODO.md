@@ -19,6 +19,6 @@
 
 _⚠️ Da implementare solo dopo conferma che tutto funziona su HF Spaces._
 
-- [ ] Endpoint `GET /api/v1/lessons/export` — esporta tutte le lezioni di un utente in JSON
-- [ ] Endpoint `POST /api/v1/lessons/import` — importa lezioni da JSON
-- [ ] UI nel frontend: pulsanti Export/Import nella Dashboard o nel profilo
+- [x] Endpoint `GET /api/v1/export-import/export` — esporta tutte le lezioni + laboratori + Q&A + stato in JSON
+- [x] Endpoint `POST /api/v1/export-import/import` — importa dati da JSON
+- [x] UI nel frontend: pulsanti Export/Import nella pagina Profilo
