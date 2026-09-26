@@ -9,6 +9,37 @@ Le versioni ufficiali sono tratte dal file `frontend/src/version.json` di ogni c
 
 ---
 
+## [1.2.0] - 2026-09-26 - Design system, Roadmaps, Labs v2, Thread+Chat, P0 sicurezza
+
+### Aggiunto
+- Pagina Roadmaps: catalogo roadmap.sh (94) + My Roadmap Paths, corsi con `source='roadmap'`
+- Labs v2: spine project + livelli foundation/applied/challenge, mode guided/challenge,
+  setup collassabile, acceptance criteria, reflection, toggle vista, target level
+- Q&A thread + chat AI su lezioni e lab: risposte annidate, collasso thread,
+  pannello chat con thread intero e memoria (20 turni), delete a cascata
+- Design system: font Geist self-hosted, `@tailwindcss/typography`, toast Sonner,
+  dialog conferma/prompt, Skeleton/Empty, nav attiva, dark segue sistema
+- Auto-migrazione DB all'avvio backend Docker + healthcheck Postgres
+- Streak giorni attività + fiamma sidebar (`GET /users/streak`, niente migration)
+- Skill path: indice corsi/lab come timeline verticale (condiviso `IndexPath`)
+- Command palette Cmd+K (corsi, lab, azioni, tema)
+- Overview corso "Cosa imparerai" + metadata card (N lezioni, tempo stimato, livello)
+- Unico accento indaco (via arancio lab), superfici hairline, niente gradienti
+
+### Modificato
+- `GET /users/me` non espone più chiavi in chiaro (flag `*_set`, blank=keep)
+- Password minima 8 caratteri lato server + messaggi errore register visibili
+- CORS ristretto a localhost/hostname/LAN (era `*`), rimosso mount `/media` pubblico
+- JWT/Fernet derivati da `SECRET_KEY` (prima da `DATABASE_URL`); vecchi token invalidati
+- Log segreti rimossi da llm_service, `SQL_ECHO` off di default
+
+### Database
+- `courses.source` (default 'ai') + `courses.roadmap_slug`
+- `lesson_questions` / `lab_questions`: `parent_id` (FK self), `role`,
+  `conversation_id`, `answer` nullable
+
+---
+
 ## [1.1.0] - PDF Caching, Loading Indicators & PDF Download per Labs
 
 ### Aggiunto

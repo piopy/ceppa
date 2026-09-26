@@ -24,11 +24,15 @@ Ma soprattutto, **qualcuno mi saprà spiegare perchè in python `(0.1 + 0.2) != 
 
 ## 🏗️ Architettura del Progetto
 
-**Ceppa** è una piattaforma web per la generazione automatica e intelligente di corsi online multilingui. Utilizza l'API di Google Generative AI (Gemini) per:
+**Ceppa** è una piattaforma web per la generazione automatica e intelligente di corsi online multilingui. Utilizza un LLM compatibile OpenAI per:
 
 - ✨ Generare corsi completi da una descrizione
+- 🗺️ Importare roadmap da roadmap.sh e studiarle come corsi
+- 🧪 Hands-on labs con spine project, livelli guided/challenge e criteri di accettazione
 - 📖 Creare lezioni strutturate con indice e contenuti
+- 💬 Thread e chat AI su lezioni e lab, con memoria della conversazione
 - 📄 Esportare lezioni in PDF con formattazione professionale
+- 🔥 Streak giorni di attività, command palette (⌘K)
 - 🌍 Supporto multilingue (Italiano e Inglese)
 - 📊 Tracciamento del progresso di completamento
 - 🔐 Autenticazione sicura con JWT e bcrypt
@@ -92,7 +96,7 @@ Ceppa/
 
 ### Prerequisiti
 - Docker & Docker Compose
-- API_KEY (generare da [Google AI Studio](https://aistudio.google.com)), che verranno usate con la libreria OpenAI per accedere ai modelli Gemini.
+- Una API key per un provider LLM compatibile OpenAI (es. [Google AI Studio](https://aistudio.google.com) per Gemini, oppure OpenCode Zen/Go).
 
 ### Setup
 
@@ -104,26 +108,33 @@ Ceppa/
 
 2. **Configurare le variabili d'ambiente**
    ```bash
-   # Creare envs/develop.env e inserire:
+   # Creare envs/local.env e inserire:
    OPENAI_API_KEY=<<API_KEY>>
    OPENAI_BASE_URL=<<BASE_URL>>
    LLM_MODEL=<<MODEL_NAME>>
-   DEFAULT_LANGUAGE=<<it/eng>>
+   DEFAULT_LANGUAGE=<<it/en>>
    MAX_CONCURRENT_WORKERS=<<NUMBER>>
    POSTGRES_USER=<<USER>>
    POSTGRES_PASSWORD=<<PASSWORD>>
    POSTGRES_DB=<<DB_NAME>>
    DATABASE_URL=<<DATABASE_URL>>
+   SECRET_KEY=<<openssl rand -hex 32>>
    ```
 
    ```bash
    # Modificare il .env per scegliere le porte da esporre
-   BACKEND_PORT=8000
-   FRONTEND_PORT=5173
-   DB_PORT=5432
-   
+   BACKEND_PORT=<<HOST_BACKEND_PORT>>
+   FRONTEND_PORT=<<HOST_FRONTEND_PORT>>
+   DB_PORT=<<HOST_DB_PORT>>
+
    ENV_MODE=<<local/develop/deploy>>
    ```
+
+   Note:
+   - Le migrazioni DB (`alembic upgrade head`) girano da sole all'avvio del backend.
+   - `SECRET_KEY` firma JWT e cifratura chiavi: i token creati prima di un cambio chiave vanno riloggati.
+   - Provider tipo OpenCode Zen/Go: il backend invia già `x-opencode-session` + user agent proprio;
+     i modelli serviti via Responses API (es. `muse-spark-*`) sono instradati in automatico.
    
 
 3. **Avviare i container**
@@ -173,8 +184,8 @@ Ceppa/
 
 ### Autenticazione
 ```
-POST   /auth/register          # Registrazione
-POST   /auth/login             # Login
+POST   /auth/register          # Registrazione (password min 8)
+POST   /auth/login             # Login (rate limit 10 tentativi/5min)
 POST   /auth/refresh           # Refresh token
 POST   /auth/logout            # Logout
 ```
@@ -207,11 +218,15 @@ GET    /config/languages       # Lingue disponibili
 ## 📋 Funzionalità Attuali
 
 - ✅ Generazione automatica di corsi tramite AI
+- ✅ Roadmap roadmap.sh importabili come corsi
+- ✅ Hands-on labs v2 (spine project, guided/challenge, acceptance criteria)
+- ✅ Thread + chat AI su lezioni e lab, con memoria
 - ✅ Generazione di lezioni con contenuti strutturati
-- ✅ Indice lezioni con scroll animation
+- ✅ Indice lezioni come skill path con stati
 - ✅ Esportazione PDF con fallback engine (xelatex → pdflatex)
-- ✅ Autenticazione JWT sicura
-- ✅ Tracciamento progresso lezioni
+- ✅ Autenticazione JWT sicura + refresh + rate limit login
+- ✅ Tracciamento progresso lezioni (su totale indice)
+- ✅ Streak attività + command palette (⌘K)
 - ✅ Supporto multilingue (IT/EN)
 - ✅ UI responsiva con TailwindCSS
 - ✅ Animazioni fluide con Framer Motion
@@ -263,3 +278,9 @@ GET    /config/languages       # Lingue disponibili
 ## 📝 Licenza
 
 [MIT - Vedi Wikipedia per dettagli](https://it.wikipedia.org/wiki/Licenza_MIT)
+
+## 🙏 Attribuzioni
+
+- Roadmap, titoli e link della sezione Roadmaps forniti da [roadmap.sh](https://roadmap.sh),
+  usati con attribuzione. Le lezioni generate dalla AI possono contenere errori:
+  verificare sui materiali ufficiali prima di un uso critico.
