@@ -102,15 +102,23 @@ async def read_hands_on_courses(
     )
     courses = result.scalars().all()
 
+    # Stats lab in 1 query (niente N+1)
+    course_ids = [c.id for c in courses]
+    stats: dict = {}
+    if course_ids:
+        stats_res = await db.execute(
+            select(Lab.hands_on_course_id, Lab.is_completed).where(
+                Lab.hands_on_course_id.in_(course_ids)
+            )
+        )
+        for cid, completed in stats_res.all():
+            t, d = stats.get(cid, (0, 0))
+            stats[cid] = (t + 1, d + (1 if completed else 0))
+
     # Enrich with stats
     course_list = []
     for course in courses:
-        labs_result = await db.execute(
-            select(Lab).where(Lab.hands_on_course_id == course.id)
-        )
-        labs = labs_result.scalars().all()
-        total_labs = len(labs)
-        completed_labs = sum(1 for lab in labs if lab.is_completed)
+        total_labs, completed_labs = stats.get(course.id, (0, 0))
 
         course_list.append(
             hands_on_schema.HandsOnCourseList(

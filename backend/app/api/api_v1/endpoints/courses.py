@@ -113,16 +113,23 @@ async def read_courses(
     )
     courses = result.scalars().all()
 
+    # Stats lezioni in 1 query (niente N+1)
+    course_ids = [c.id for c in courses]
+    stats: dict = {}
+    if course_ids:
+        stats_res = await db.execute(
+            select(Lesson.course_id, Lesson.is_completed).where(
+                Lesson.course_id.in_(course_ids)
+            )
+        )
+        for cid, completed in stats_res.all():
+            t, d = stats.get(cid, (0, 0))
+            stats[cid] = (t + 1, d + (1 if completed else 0))
+
     # Enrich courses with lesson completion stats
     course_list = []
     for course in courses:
-        # Count total and completed lessons
-        lessons_result = await db.execute(
-            select(Lesson).where(Lesson.course_id == course.id)
-        )
-        lessons = lessons_result.scalars().all()
-        total_lessons = len(lessons)
-        completed_lessons = sum(1 for lesson in lessons if lesson.is_completed)
+        total_lessons, completed_lessons = stats.get(course.id, (0, 0))
 
         course_list.append(
             course_schema.CourseList(
@@ -252,9 +259,10 @@ async def delete_course(
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
-    Delete a course and all its lessons.
+    Delete a course and all its lessons (single-statement deletes, niente loop).
     """
     from app.models.base import Lesson, LessonQuestion
+    from sqlalchemy import delete as sa_delete
 
     # Verify course ownership
     result = await db.execute(
@@ -264,20 +272,16 @@ async def delete_course(
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    # Fetch all lessons for this course
-    lessons_result = await db.execute(
-        select(Lesson).where(Lesson.course_id == course_id)
+    lesson_ids = (
+        (await db.execute(select(Lesson.id).where(Lesson.course_id == course_id)))
+        .scalars()
+        .all()
     )
-    lessons = lessons_result.scalars().all()
-
-    for lesson in lessons:
-        # Delete all questions belonging to this lesson first (NOT NULL FK constraint)
-        questions_result = await db.execute(
-            select(LessonQuestion).where(LessonQuestion.lesson_id == lesson.id)
+    if lesson_ids:
+        await db.execute(
+            sa_delete(LessonQuestion).where(LessonQuestion.lesson_id.in_(lesson_ids))
         )
-        for question in questions_result.scalars().all():
-            await db.delete(question)
-        await db.delete(lesson)
+        await db.execute(sa_delete(Lesson).where(Lesson.id.in_(lesson_ids)))
 
     # Delete the course
     await db.delete(course)
