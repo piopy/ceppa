@@ -1,11 +1,12 @@
 import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Book, PlusCircle, Home, Github, ChevronLeft, ChevronRight, Moon, Sun, Settings, FlaskConical, Map } from 'lucide-react';
+import { LogOut, Book, PlusCircle, Home, Github, ChevronLeft, ChevronRight, Moon, Sun, Settings, FlaskConical, Map, Flame, Search } from 'lucide-react';
 import versionData from '../version.json';
+import CommandPalette from './CommandPalette';
 import { useState, useEffect } from 'react';
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, streak } = useAuth();
   const navigate = useNavigate();
   const [showSidebar, setShowSidebar] = useState(true);
   const [darkMode, setDarkMode] = useState(() => {
@@ -71,6 +72,21 @@ export default function Layout() {
             <Book className="w-6 h-6 text-primary" />
             Ceppa.ai
           </h1>
+          {streak && streak.streak > 0 && (
+            <div className="mt-3 flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2" title={`${streak.total_days} giorni di attività totali`}>
+              <Flame className={`h-4 w-4 ${streak.today_done ? 'fill-orange-500 text-orange-500' : 'text-white/40'}`} />
+              <span className="tabular text-sm font-bold text-white">{streak.streak}</span>
+              <span className="text-xs text-white/60">{streak.streak === 1 ? 'giorno' : 'giorni'}</span>
+            </div>
+          )}
+          <button
+            onClick={() => window.dispatchEvent(new Event('ceppa-palette'))}
+            className="mt-2 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-white/60 transition hover:bg-white/10 hover:text-white"
+          >
+            <Search className="h-4 w-4" />
+            <span className="flex-1 text-left">Cerca…</span>
+            <kbd className="rounded border border-white/20 px-1 font-mono text-[10px]">⌘K</kbd>
+          </button>
         </div>
         
         <nav aria-label="Principale" className="flex-1 px-3 space-y-1 mt-3 text-[15px]">
@@ -87,6 +103,7 @@ export default function Layout() {
             Roadmaps
           </NavLink>
         </nav>
+
 
         <div className="px-4 py-3">
           <p className="text-xs text-white/60 px-4 py-2 text-center">v{versionData.version}</p>
@@ -142,6 +159,7 @@ export default function Layout() {
       <main className="flex-1 overflow-y-auto relative">
         <Outlet />
       </main>
+      <CommandPalette />
     </div>
   );
 }

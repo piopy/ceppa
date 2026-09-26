@@ -115,10 +115,13 @@ async def read_hands_on_courses(
             t, d = stats.get(cid, (0, 0))
             stats[cid] = (t + 1, d + (1 if completed else 0))
 
-    # Enrich with stats
+    # Enrich with stats: totale da indice, completati da DB
     course_list = []
     for course in courses:
-        total_labs, completed_labs = stats.get(course.id, (0, 0))
+        norm = normalize_course_index(course.index_json or "[]")
+        index_total = sum(len(m.get("labs", [])) for m in norm.get("modules", []))
+        generated, completed_labs = stats.get(course.id, (0, 0))
+        total_labs = index_total or generated
 
         course_list.append(
             hands_on_schema.HandsOnCourseList(

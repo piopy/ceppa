@@ -7,6 +7,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
+  const [streak, setStreak] = useState(null);
 
   useEffect(() => {
     const restoreSession = async () => {
@@ -21,6 +22,12 @@ export const AuthProvider = ({ children }) => {
             localStorage.removeItem('token');
             setToken(null);
           }
+        }
+        try {
+          const s = await client.get('/users/streak');
+          setStreak(s.data);
+        } catch {
+          setStreak(null);
         }
       }
       setLoading(false);
@@ -54,10 +61,21 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+    setStreak(null);
+  };
+
+  const refreshStreak = async () => {
+    if (!token) return;
+    try {
+      const s = await client.get('/users/streak');
+      setStreak(s.data);
+    } catch {
+      /* ignora */
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading, streak, refreshStreak }}>
       {children}
     </AuthContext.Provider>
   );

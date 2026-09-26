@@ -64,6 +64,13 @@ function SortableCourseCard({ course, onDelete, onRename, deleting, renaming, id
           )}
         </div>
         {(course.total_lessons > 0) && (
+          <div className="tabular mt-3 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+            <span><strong className="text-gray-800 dark:text-gray-200">{course.total_lessons}</strong> lezioni</span>
+            <span aria-hidden className="h-3 w-px bg-gray-200 dark:bg-gray-700" />
+            <span>≈ <strong className="text-gray-800 dark:text-gray-200">{course.total_lessons >= 8 ? `${Math.round(course.total_lessons * 8 / 60 * 10) / 10}h` : `${course.total_lessons * 8}min`}</strong></span>
+          </div>
+        )}
+        {(course.total_lessons > 0) && (
           <div className="mt-4">
             <div className="mb-1.5 flex justify-between text-xs">
               <span className="font-medium text-gray-500 dark:text-gray-400">Progresso</span>

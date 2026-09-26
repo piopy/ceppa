@@ -4,6 +4,7 @@ import client from '../api/client';
 import { toast } from 'sonner';
 import { confirmDialog } from '../components/ui';
 import { Thread, ChatPanel, chainFor } from '../components/qa';
+import IndexPath from '../components/IndexPath';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle, Maximize2, ChevronLeft, DownloadCloud, Trash2, Globe, Save, Star } from 'lucide-react';
@@ -238,14 +239,12 @@ export default function CourseView() {
       await client.put(`/lessons/${currentLesson.id}`, {
         is_completed: newCompletedState
       });
-      setSuccessMsg(newCompletedState ? 'Lesson marked as completed!' : 'Lesson marked as incomplete!');
       setCurrentLesson(prev => ({ ...prev, is_completed: newCompletedState }));
       // Update generated lessons map
       setGeneratedLessons(prev => ({
         ...prev,
         [currentLesson.path_in_index]: newCompletedState ? 'completed' : 'generated'
       }));
-      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
       toast.error('Failed to update progress.');
     }
@@ -279,6 +278,15 @@ export default function CourseView() {
 
   const getLessonStatus = (path) => {
     return generatedLessons[path] || 'not-generated';
+  };
+
+  const firstMissingLesson = () => {
+    for (const m of index) {
+      for (const l of (m.lessons || [])) {
+        if (getLessonStatus(l.path) === 'not-generated') return l;
+      }
+    }
+    return index[0]?.lessons?.[0] || null;
   };
 
   const toggleFavorite = async (e, lessonPath) => {
@@ -573,9 +581,33 @@ export default function CourseView() {
             <ChatPanel chat={chat} onSend={handleChatSend} sending={chatSending} onClose={() => setChat(null)} />
           </motion.div>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center text-gray-400">
-            <BookOpen className="w-24 h-24 mb-4 opacity-10" />
-            <p className="text-xl font-medium text-gray-500 dark:text-gray-300">Select a lesson from the index to start learning.</p>
+          <div className="mx-auto max-w-2xl px-6 py-12">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Panoramica corso</p>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight dark:text-gray-100">{course?.title}</h2>
+            {course?.description && <p className="mt-2 text-gray-500 dark:text-gray-400">{course.description}</p>}
+            <div className="tabular mt-4 flex gap-4 text-sm text-gray-500 dark:text-gray-400">
+              <span><strong className="text-gray-900 dark:text-gray-100">{getTotalLessons()}</strong> lezioni</span>
+              <span>≈ <strong className="text-gray-900 dark:text-gray-100">{Math.max(1, Math.round(getTotalLessons() * 8 / 60))}h</strong> di studio</span>
+              <span><strong className="text-gray-900 dark:text-gray-100">{getGeneratedCount()}</strong> pronte</span>
+            </div>
+            <h3 className="mb-3 mt-8 font-bold dark:text-gray-100">Cosa imparerai</h3>
+            <ol className="space-y-2.5">
+              {(index || []).map((m, i) => (
+                <li key={i} className="flex items-start gap-3 rounded-xl border border-gray-200 p-3.5 dark:border-gray-700">
+                  <span className="tabular flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">{i + 1}</span>
+                  <div>
+                    <p className="text-sm font-semibold dark:text-gray-100">{m.title}</p>
+                    <p className="text-xs text-gray-500">{(m.lessons || []).length} lezioni</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <button
+              onClick={() => { const first = firstMissingLesson(); if (first) selectLesson(first); }}
+              className="mt-8 flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-[0.98] transition"
+            >
+              <Zap className="h-4 w-4" /> Genera la prima lezione
+            </button>
           </div>
         )}
       </div>
@@ -613,7 +645,7 @@ export default function CourseView() {
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition ${
                 generatingAll 
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                  : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 shadow-md hover:shadow-lg'
+                  : 'bg-primary text-white hover:bg-indigo-700 active:scale-[0.98]'
               }`}
               title="Genera tutte le lezioni mancanti in parallelo"
             >
@@ -633,23 +665,23 @@ export default function CourseView() {
           <h3 className="text-lg font-extrabold mt-1 dark:text-gray-100">{course.title}</h3>
           
           {/* Web Research Toggle */}
-          <div className="mt-3 flex items-center gap-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-100 dark:border-blue-800">
+          <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700">
             <label className="flex items-center gap-2 cursor-pointer flex-1">
               <input
                 type="checkbox"
                 checked={useWebResearch}
                 onChange={(e) => setUseWebResearch(e.target.checked)}
                 disabled={generatingAll}
-                className="w-4 h-4 rounded border-2 border-blue-300 dark:border-blue-600 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer disabled:opacity-50"
+                className="w-4 h-4 rounded text-primary focus:ring-2 focus:ring-primary/40 cursor-pointer disabled:opacity-50"
               />
-              <Globe className={`w-4 h-4 ${useWebResearch ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'} transition`} />
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                Use web research to generate lessons
+              <Globe className={`w-4 h-4 ${useWebResearch ? 'text-primary' : 'text-gray-400'} transition`} />
+              <span className="text-xs text-gray-600 dark:text-gray-300">
+                Ricerca web
               </span>
             </label>
             {useWebResearch && (
-              <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-full font-medium">
-                Active
+              <span className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-primary dark:text-indigo-300 rounded-full font-semibold">
+                Attiva
               </span>
             )}
           </div>
@@ -692,12 +724,12 @@ export default function CourseView() {
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 relative overflow-hidden">
               {/* Blue bar for generated lessons */}
               <div 
-                className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-500"
+                className="absolute inset-y-0 left-0 bg-primary/60 transition-all duration-500"
                 style={{ width: `${getTotalLessons() > 0 ? (getGeneratedCount() / getTotalLessons()) * 100 : 0}%` }}
               />
               {/* Green bar for completed lessons (on top) */}
               <div 
-                className="absolute inset-y-0 left-0 bg-gradient-to-r from-green-400 to-green-600 transition-all duration-500"
+                className="absolute inset-y-0 left-0 bg-green-500 transition-all duration-500"
                 style={{ width: `${getTotalLessons() > 0 ? (getCompletedCount() / getTotalLessons()) * 100 : 0}%` }}
               />
             </div>
@@ -705,61 +737,14 @@ export default function CourseView() {
         </div>
         
         <div className="p-2">
-          {index.map((module, mIdx) => (
-            <div key={mIdx} className="mb-4">
-              <div className="px-4 py-2 font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                {module.title}
-              </div>
-              <div className="space-y-1">
-                {module.lessons.map((lesson, lIdx) => {
-                  const status = getLessonStatus(lesson.path);
-                  const isFav = favoriteLessons[lesson.path];
-                  return (
-                    <button
-                      key={lIdx}
-                      onClick={() => selectLesson(lesson)}
-                      className={`w-full text-left px-4 py-2 pl-10 text-sm transition flex items-center gap-2 group overflow-hidden ${currentLesson?.path_in_index === lesson.path ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
-                    >
-                      {/* Status Badge */}
-                      <div className="flex-shrink-0">
-                        {status === 'completed' ? (
-                          <div className="w-2 h-2 rounded-full bg-green-500" title="Completed" />
-                        ) : status === 'generated' ? (
-                          <div className="w-2 h-2 rounded-full bg-blue-500" title="Generated" />
-                        ) : (
-                          <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" title="Not generated" />
-                        )}
-                      </div>
-
-                      {/* Favorite Star - only for generated/completed lessons */}
-                      {status !== 'not-generated' && (
-                        <span
-                          className="flex-shrink-0 cursor-pointer"
-                          onClick={(e) => toggleFavorite(e, lesson.path)}
-                          title={isFav ? 'Remove from favorites' : 'Add to favorites'}
-                        >
-                          <Star className={`w-3.5 h-3.5 transition ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400'}`} />
-                        </span>
-                      )}
-                      
-                      <span className="whitespace-nowrap transition-transform duration-[3000ms] ease-linear group-hover:-translate-x-full flex-1">
-                        {lesson.title}
-                      </span>
-                      
-                      <span className="flex-shrink-0 ml-2">
-                        {currentLesson?.path_in_index === lesson.path ? (
-                          <ChevronRight className="w-4 h-4" />
-                        ) : (
-                          <div className="w-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 group-hover:bg-primary transition" />
-                        )}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+          <IndexPath
+            modules={index.map((m) => ({ title: m.title, items: (m.lessons || []).map((l) => ({ key: l.path, title: l.title, raw: l })) }))}
+            getStatus={(key) => getLessonStatus(key)}
+            isFav={(key) => favoriteLessons[key]}
+            isCurrent={(key) => currentLesson?.path_in_index === key}
+            onSelect={(item) => selectLesson(item.raw)}
+            onToggleFav={(e, key) => toggleFavorite(e, key)}
+          />
         </div>
         
         {/* Download Full PDF Button - Always visible */}
@@ -792,9 +777,9 @@ export default function CourseView() {
               }
             }}
             disabled={!areAllLessonsGenerated() || downloadingPdf}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition shadow-lg ${
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition ${
               areAllLessonsGenerated() && !downloadingPdf
-                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:shadow-xl cursor-pointer' 
+                ? 'bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] cursor-pointer' 
                 : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
             }`}
             title={areAllLessonsGenerated() ? 'Download complete course as single PDF' : `${getTotalLessons() - getGeneratedCount()} lesson(s) still need to be generated`}

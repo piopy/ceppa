@@ -1,11 +1,14 @@
 from typing import Any
+from datetime import date, timedelta
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy import func, distinct
 
 from app.api import deps
 from app.core.db import get_db
 from app.core.security import encrypt_value
-from app.models.base import User
+from app.models.base import User, Course, Lesson, LessonQuestion, HandsOnCourse, Lab, LabQuestion
 from app.schemas import user as user_schema
 
 router = APIRouter()
@@ -23,6 +26,37 @@ def _user_to_out(user: User) -> dict:
         "custom_openai_api_key_set": bool(user.custom_openai_api_key),
         "custom_tavily_api_key_set": bool(user.custom_tavily_api_key),
     }
+
+
+@router.get("/streak")
+async def get_streak(
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Giorni di attività consecutivi (lezioni/lab/domande create). Niente migration: usa created_at."""
+    days: set = set()
+
+    async def collect(model, join_chain):
+        q = select(func.date(model.created_at).label("d")).select_from(model)
+        for join_model, onclause in join_chain:
+            q = q.join(join_model, onclause)
+        q = q.where(join_chain[-1][0].user_id == current_user.id).group_by("d")
+        for (d,) in (await db.execute(q)).all():
+            if d:
+                days.add(d if isinstance(d, date) else d.date() if hasattr(d, "date") else d)
+
+    await collect(Lesson, [(Course, Lesson.course_id == Course.id)])
+    await collect(LessonQuestion, [(Lesson, LessonQuestion.lesson_id == Lesson.id), (Course, Lesson.course_id == Course.id)])
+    await collect(Lab, [(HandsOnCourse, Lab.hands_on_course_id == HandsOnCourse.id)])
+    await collect(LabQuestion, [(Lab, LabQuestion.lab_id == Lab.id), (HandsOnCourse, Lab.hands_on_course_id == HandsOnCourse.id)])
+
+    today = date.today()
+    streak = 0
+    cursor = today if today in days else today - timedelta(days=1)
+    while cursor in days:
+        streak += 1
+        cursor -= timedelta(days=1)
+    return {"streak": streak, "today_done": today in days, "total_days": len(days)}
 
 
 @router.get("/me")

@@ -4,6 +4,7 @@ import client from '../api/client';
 import { toast } from 'sonner';
 import { confirmDialog } from '../components/ui';
 import { Thread, ChatPanel, chainFor } from '../components/qa';
+import IndexPath from '../components/IndexPath';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChevronRight, ChevronDown, CheckCircle2, Loader2, Send, BookOpen, FlaskConical, Star, Lightbulb, Terminal, ArrowLeft, Save, RefreshCcw, Maximize2, ChevronLeft, Download, FileText, Zap, MessageCircle, Trash2, Globe, DownloadCloud, RotateCcw, FileText as FileTextIcon } from 'lucide-react';
@@ -281,13 +282,11 @@ export default function LabView() {
       await client.put(`/hands-on/${course.id}/labs/${currentLab.id}`, {
         is_completed: newCompletedState
       });
-      setSuccessMsg(newCompletedState ? 'Lab marked as completed!' : 'Lab marked as incomplete!');
       setCurrentLab(prev => ({ ...prev, is_completed: newCompletedState }));
       setGeneratedLabs(prev => ({
         ...prev,
         [currentLab.path_in_index]: newCompletedState ? 'completed' : 'generated'
       }));
-      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
       toast.error('Failed to update progress.');
     }
@@ -435,7 +434,7 @@ export default function LabView() {
         {/* Back button */}
         <button
           onClick={() => navigate('/labs')}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-orange-500 transition mb-6"
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-indigo-500 transition mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Labs
@@ -443,8 +442,8 @@ export default function LabView() {
 
         {/* Spine project banner */}
         {index.spine_project && (
-          <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-900/50 dark:bg-orange-950/30">
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-orange-600 dark:text-orange-400">
+          <div className="mb-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-950/50 dark:bg-indigo-950/30">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-400">
               <FlaskConical className="h-4 w-4" /> Spine project
             </p>
             <p className="mt-1 font-bold text-gray-900 dark:text-gray-100">{index.spine_project.title}</p>
@@ -463,7 +462,7 @@ export default function LabView() {
 
         {labLoading ? (
           <div className="h-full flex flex-col items-center justify-center space-y-4">
-            <Loader2 className="w-16 h-16 text-orange-500 animate-spin" />
+            <Loader2 className="w-16 h-16 text-indigo-500 animate-spin" />
             <p className="text-xl font-medium text-gray-500 dark:text-gray-300">Generating your lab session...</p>
           </div>
         ) : currentLab ? (
@@ -494,7 +493,7 @@ export default function LabView() {
                 }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition ${
                   isImmersiveMode 
-                    ? 'bg-orange-500 text-white hover:bg-orange-600' 
+                    ? 'bg-indigo-500 text-white hover:bg-indigo-700' 
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
                 title="Toggle Immersive Reading Mode"
@@ -524,7 +523,7 @@ export default function LabView() {
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition ${
                   currentLab.is_completed 
                     ? 'bg-green-100 text-green-700' 
-                    : 'bg-orange-500 text-white hover:bg-orange-600'
+                    : 'bg-indigo-500 text-white hover:bg-indigo-700'
                 }`}
               >
                 <CheckCircle2 className="w-5 h-5" />
@@ -537,11 +536,11 @@ export default function LabView() {
               <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
                 <div className="flex justify-between text-sm mb-2">
                   <span className="font-medium text-gray-700 dark:text-gray-300">Lab Progress</span>
-                  <span className="font-bold text-orange-500">{completedSteps}/{totalSteps} steps</span>
+                  <span className="font-bold text-indigo-500">{completedSteps}/{totalSteps} steps</span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                   <div 
-                    className="bg-gradient-to-r from-orange-400 to-red-500 h-full transition-all duration-500 rounded-full"
+                    className="bg-primary h-full transition-all duration-500 rounded-full"
                     style={{ width: `${totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0}%` }}
                   />
                 </div>
@@ -562,7 +561,7 @@ export default function LabView() {
                       <button
                         key={m}
                         onClick={() => setViewMode(m)}
-                        className={`rounded-md px-3 py-1 capitalize transition ${viewMode === m ? 'bg-orange-500 text-white' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
+                        className={`rounded-md px-3 py-1 capitalize transition ${viewMode === m ? 'bg-indigo-500 text-white' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
                       >
                         {m}
                       </button>
@@ -585,7 +584,7 @@ export default function LabView() {
                   className="flex w-full items-center justify-between bg-gray-50 p-4 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-750"
                 >
                   <span className="flex items-center gap-2 font-bold text-gray-900 dark:text-gray-100">
-                    <Terminal className="h-4 w-4 text-orange-500" /> Setup ambiente {showSetup ? '(nascondi)' : '(mostra)'}
+                    <Terminal className="h-4 w-4 text-indigo-500" /> Setup ambiente {showSetup ? '(nascondi)' : '(mostra)'}
                   </span>
                   {showSetup ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
                 </button>
@@ -628,7 +627,7 @@ export default function LabView() {
             {/* Practical Steps */}
             <div className="space-y-4 mb-8">
               <h3 className={`text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100 ${isImmersiveMode ? 'text-2xl' : ''}`}>
-                <Terminal className="w-6 h-6 text-orange-500" />
+                <Terminal className="w-6 h-6 text-indigo-500" />
                 Practical Steps
               </h3>
               
@@ -646,7 +645,7 @@ export default function LabView() {
                     className={`p-5 rounded-xl border-2 transition ${
                       step.is_completed
                         ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20'
-                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-orange-300 dark:hover:border-orange-700'
+                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-300 dark:hover:border-indigo-800'
                     }`}
                   >
                     <div className="flex items-start gap-4">
@@ -656,7 +655,7 @@ export default function LabView() {
                         className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition mt-0.5 ${
                           step.is_completed
                             ? 'bg-green-500 border-green-500 text-white'
-                            : 'border-gray-300 dark:border-gray-600 hover:border-orange-500'
+                            : 'border-gray-300 dark:border-gray-600 hover:border-indigo-500'
                         }`}
                       >
                         {step.is_completed && <CheckCircle2 className="w-4 h-4" />}
@@ -752,14 +751,14 @@ export default function LabView() {
             <hr className="my-8 border-gray-200 dark:border-gray-700" />
             <section className="bg-gray-50 dark:bg-gray-800 p-8 rounded-2xl">
               <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                <Send className="w-5 h-5 text-orange-500" />
+                <Send className="w-5 h-5 text-indigo-500" />
                 Lab Notes & Observations
               </h3>
               <textarea 
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
                 placeholder="Record your observations, command outputs, errors, or reflections here..."
-                className="w-full h-36 p-4 border dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition"
+                className="w-full h-36 p-4 border dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition"
               />
               {notes !== (currentLab.user_notes || '') && (
                 <p className="text-sm text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
@@ -771,7 +770,7 @@ export default function LabView() {
                 <button 
                   onClick={handleSaveNotes}
                   disabled={savingNotes || notes === (currentLab.user_notes || '')}
-                  className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-3 bg-indigo-500 text-white rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50"
                 >
                   {savingNotes ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                   Save Notes
@@ -836,7 +835,7 @@ export default function LabView() {
             {/* Q&A Section */}
             <section className="mt-12 border-t dark:border-gray-700 pt-12">
               <h3 className="text-2xl font-bold mb-6 flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                <MessageCircle className="w-6 h-6 text-orange-500" />
+                <MessageCircle className="w-6 h-6 text-indigo-500" />
                 Ask the AI Assistant
               </h3>
 
@@ -885,7 +884,7 @@ export default function LabView() {
           <div className="p-6 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-gray-50 dark:bg-gray-900 z-10">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <FlaskConical className="w-5 h-5 text-orange-500" />
+                <FlaskConical className="w-5 h-5 text-indigo-500" />
                 <h2 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Lab Index</h2>
               </div>
               <button
@@ -894,7 +893,7 @@ export default function LabView() {
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition ${
                   generatingAll 
                     ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                    : 'bg-gradient-to-r from-orange-500 to-red-600 text-white hover:from-orange-600 hover:to-red-700 shadow-md hover:shadow-lg'
+                    : 'bg-primary text-white hover:bg-indigo-700 active:scale-[0.98]'
                 }`}
                 title="Genera tutti i lab mancanti in parallelo"
               >
@@ -914,16 +913,16 @@ export default function LabView() {
             <h3 className="text-lg font-extrabold mt-1 dark:text-gray-100">{course?.title || course?.topic}</h3>
             
             {/* Web Research Toggle */}
-            <div className="mt-3 flex items-center gap-3 px-3 py-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg border-2 border-orange-100 dark:border-orange-800">
+            <div className="mt-3 flex items-center gap-3 px-3 py-2 bg-indigo-50 dark:bg-indigo-950/20 rounded-lg border-2 border-indigo-100 dark:border-indigo-900">
               <label className="flex items-center gap-2 cursor-pointer flex-1">
                 <input
                   type="checkbox"
                   checked={useWebResearch}
                   onChange={(e) => setUseWebResearch(e.target.checked)}
                   disabled={generatingAll}
-                  className="w-4 h-4 rounded border-2 border-orange-300 dark:border-orange-600 text-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-0 cursor-pointer disabled:opacity-50"
+                  className="w-4 h-4 rounded border-2 border-indigo-300 dark:border-indigo-700 text-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer disabled:opacity-50"
                 />
-                <Globe className={`w-4 h-4 ${useWebResearch ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400'} transition`} />
+                <Globe className={`w-4 h-4 ${useWebResearch ? 'text-indigo-700 dark:text-indigo-400' : 'text-gray-400'} transition`} />
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                   Use web research
                   {tavilyCredits && tavilyCredits.enabled && tavilyCredits.remaining !== undefined && (
@@ -934,7 +933,7 @@ export default function LabView() {
                 </span>
               </label>
               {useWebResearch && (
-                <span className="text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-800 text-orange-700 dark:text-orange-300 rounded-full font-medium">
+                <span className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300 rounded-full font-medium">
                   Active
                 </span>
               )}
@@ -942,16 +941,16 @@ export default function LabView() {
             
             {/* Generation Status */}
             {generationStatus && generationStatus.in_progress && (
-              <div className="mt-3 p-3 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800">
+              <div className="mt-3 p-3 bg-indigo-50 dark:bg-indigo-950 rounded-lg border border-indigo-200 dark:border-indigo-900">
                 <div className="flex items-center justify-between text-xs mb-2">
-                  <span className="font-semibold text-orange-900 dark:text-orange-300">Generazione in corso...</span>
-                  <span className="text-orange-700 dark:text-orange-400 font-bold">
+                  <span className="font-semibold text-indigo-950 dark:text-indigo-300">Generazione in corso...</span>
+                  <span className="text-indigo-800 dark:text-indigo-400 font-bold">
                     {generationStatus.completed} / {generationStatus.total}
                   </span>
                 </div>
-                <div className="w-full bg-orange-200 rounded-full h-2 overflow-hidden">
+                <div className="w-full bg-indigo-200 rounded-full h-2 overflow-hidden">
                   <div 
-                    className="bg-gradient-to-r from-orange-500 to-red-600 h-full transition-all duration-500 rounded-full"
+                    className="bg-primary h-full transition-all duration-500 rounded-full"
                     style={{ width: `${generationStatus.total > 0 ? (generationStatus.completed / generationStatus.total) * 100 : 0}%` }}
                   />
                 </div>
@@ -977,11 +976,11 @@ export default function LabView() {
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 relative overflow-hidden">
                 <div 
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-500"
+                  className="absolute inset-y-0 left-0 bg-primary/60 transition-all duration-500"
                   style={{ width: `${getTotalLabs() > 0 ? (getGeneratedCount() / getTotalLabs()) * 100 : 0}%` }}
                 />
                 <div 
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-green-400 to-green-600 transition-all duration-500"
+                  className="absolute inset-y-0 left-0 bg-green-500 transition-all duration-500"
                   style={{ width: `${getTotalLabs() > 0 ? (Object.values(generatedLabs).filter(s => s === 'completed').length / getTotalLabs()) * 100 : 0}%` }}
                 />
               </div>
@@ -989,80 +988,25 @@ export default function LabView() {
           </div>
           
           <div className="p-2">
-            {(index.modules || []).map((module, mIdx) => (
-              <div key={mIdx} className="mb-4">
-                <div className="px-4 py-2 font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                  <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  <span className="flex-1">{module.title}</span>
-                  {module.level && (
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
-                      module.level === 'foundation' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                      : module.level === 'challenge' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                    }`}>
-                      {module.level}
+            <IndexPath
+              modules={(index.modules || []).map((m) => ({
+                title: m.title,
+                level: m.level,
+                items: (m.labs || m.lessons || []).map((l) => ({
+                  key: l.path, title: l.title, raw: l,
+                  badge: l.mode ? (
+                    <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${l.mode === 'challenge' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+                      {l.mode === 'challenge' ? 'C' : 'G'}
                     </span>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  {(module.labs || module.lessons || []).map((lab, lIdx) => {
-                    const status = getLabStatus(lab.path);
-                    const isFav = favoriteLabs[lab.path];
-                    const isTheory = lab.type === 'theory';
-                    return (
-                      <button
-                        key={lIdx}
-                        onClick={() => selectLab(lab)}
-                        className={`w-full text-left px-4 py-2 pl-10 text-sm transition flex items-center gap-2 group ${
-                          currentLab?.path_in_index === lab.path 
-                            ? 'bg-orange-500/10 text-orange-600 font-semibold' 
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300'
-                        }`}
-                      >
-                        {/* Status Badge */}
-                        <div className="flex-shrink-0">
-                          {status === 'completed' ? (
-                            <div className="w-2 h-2 rounded-full bg-green-500" title="Completed" />
-                          ) : status === 'generated' ? (
-                            <div className="w-2 h-2 rounded-full bg-blue-500" title="Generated" />
-                          ) : (
-                            <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" title="Not generated" />
-                          )}
-                        </div>
-
-                        {/* Favorite Star */}
-                        {status !== 'not-generated' && (
-                          <span
-                            className="flex-shrink-0 cursor-pointer"
-                            onClick={(e) => toggleFavorite(e, lab.path)}
-                            title={isFav ? 'Remove from favorites' : 'Add to favorites'}
-                          >
-                            <Star className={`w-3.5 h-3.5 transition ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400'}`} />
-                          </span>
-                        )}
-
-                        {/* Type icon */}
-                        {!status || status === 'not-generated' ? (
-                          isTheory ? (
-                            <BookOpen className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                          ) : (
-                            <Terminal className="w-3.5 h-3.5 text-orange-400 flex-shrink-0" />
-                          )
-                        ) : null}
-                        
-                        <span className="flex-1 truncate">{lab.title}</span>
-                        
-                        <span className="flex-shrink-0">
-                          {currentLab?.path_in_index === lab.path ? (
-                            <ChevronRight className="w-4 h-4" />
-                          ) : null}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+                  ) : null,
+                })),
+              }))}
+              getStatus={(key) => getLabStatus(key)}
+              isFav={(key) => favoriteLabs[key]}
+              isCurrent={(key) => currentLab?.path_in_index === key}
+              onSelect={(item) => selectLab(item.raw)}
+              onToggleFav={(e, key) => toggleFavorite(e, key)}
+            />
           </div>
           
           {/* Download PDF/EPUB Buttons */}
@@ -1091,9 +1035,9 @@ export default function LabView() {
                 }
               }}
               disabled={!areAllLabsGenerated() || downloadingPdf}
-              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition shadow-lg ${
+              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition ${
                 areAllLabsGenerated() && !downloadingPdf
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:shadow-xl cursor-pointer' 
+                  ? 'bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] cursor-pointer' 
                   : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
               }`}
               title={areAllLabsGenerated() ? 'Download complete course as single PDF' : `${getTotalLabs() - getGeneratedCount()} lab(s) still need to be generated`}
@@ -1137,7 +1081,7 @@ export default function LabView() {
               disabled={!areAllLabsGenerated() || downloadingEpub}
               className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold transition shadow-lg ${
                 areAllLabsGenerated() && !downloadingEpub
-                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 hover:shadow-xl cursor-pointer' 
+                  ? 'bg-primary text-white hover:bg-indigo-700 active:scale-[0.98] cursor-pointer' 
                   : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
               }`}
               title={areAllLabsGenerated() ? 'Download complete course as single EPUB' : `${getTotalLabs() - getGeneratedCount()} lab(s) still need to be generated`}
@@ -1174,7 +1118,7 @@ export default function LabView() {
               value={regenerateFeedback}
               onChange={e => setRegenerateFeedback(e.target.value)}
               placeholder="e.g., Add more practical examples, simplify the theory, include more command-line exercises..."
-              className="w-full h-40 p-4 border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition resize-none"
+              className="w-full h-40 p-4 border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition resize-none"
               disabled={regenerating}
             />
             <div className="mt-4 flex items-center gap-2">
@@ -1185,7 +1129,7 @@ export default function LabView() {
                     key={m}
                     type="button"
                     onClick={() => setRegenerateMode(m)}
-                    className={`rounded-md px-3 py-1 capitalize transition ${regenerateMode === m ? 'bg-orange-500 text-white' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
+                    className={`rounded-md px-3 py-1 capitalize transition ${regenerateMode === m ? 'bg-indigo-500 text-white' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
                   >
                     {m}
                   </button>
@@ -1206,7 +1150,7 @@ export default function LabView() {
               <button
                 onClick={handleRegenerateLab}
                 disabled={regenerating || !regenerateFeedback.trim()}
-                className="px-6 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-3 bg-indigo-500 text-white rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50 flex items-center gap-2"
               >
                 {regenerating ? (
                   <>

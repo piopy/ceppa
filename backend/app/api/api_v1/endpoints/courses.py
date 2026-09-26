@@ -127,9 +127,18 @@ async def read_courses(
             stats[cid] = (t + 1, d + (1 if completed else 0))
 
     # Enrich courses with lesson completion stats
+    # Totale da indice (tutte le lezioni previste), completate da DB
     course_list = []
     for course in courses:
-        total_lessons, completed_lessons = stats.get(course.id, (0, 0))
+        try:
+            index_data = json.loads(course.index_json or "[]")
+            index_total = sum(len(m.get("lessons", [])) for m in index_data)
+        except Exception:
+            index_total = 0
+
+        # Completate da DB, totale da indice (fallback: generate se indice rotto)
+        generated, completed_lessons = stats.get(course.id, (0, 0))
+        total_lessons = index_total or generated
 
         course_list.append(
             course_schema.CourseList(

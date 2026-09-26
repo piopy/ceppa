@@ -110,7 +110,7 @@ export default function HandsOnLabs() {
     <div className="p-8 max-w-6xl mx-auto">
       <header className="mb-12">
         <div className="flex items-center gap-3 mb-2">
-          <FlaskConical className="w-8 h-8 text-orange-500" />
+          <FlaskConical className="w-8 h-8 text-indigo-500" />
           <h2 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">Hands-on Labs</h2>
         </div>
         <p className="text-gray-500 dark:text-gray-400 ml-11">
@@ -128,7 +128,7 @@ export default function HandsOnLabs() {
               value={newTopic}
               onChange={e => setNewTopic(e.target.value)}
               disabled={creating}
-              className="flex-1 px-6 py-4 text-lg border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-2xl focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition outline-none shadow-sm"
+              className="flex-1 px-6 py-4 text-lg border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition outline-none shadow-sm"
             />
             <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700">
               <select
@@ -163,13 +163,13 @@ export default function HandsOnLabs() {
                 value={customLanguage}
                 onChange={e => setCustomLanguage(e.target.value)}
                 disabled={creating}
-                className="px-4 py-4 text-sm border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-2xl focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition outline-none shadow-sm w-32"
+                className="px-4 py-4 text-sm border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition outline-none shadow-sm w-32"
               />
             )}
             <button 
               type="submit"
               disabled={creating || !newTopic || (language === 'custom' && !customLanguage)}
-              className="px-8 py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold rounded-2xl hover:scale-105 active:scale-95 transition flex items-center gap-2 disabled:opacity-50 disabled:hover:scale-100 shadow-lg shadow-orange-500/25"
+              className="px-8 py-4 bg-primary text-white font-bold rounded-2xl hover:bg-indigo-700 active:scale-[0.98] transition flex items-center gap-2 disabled:opacity-50"
             >
               {creating ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6" />}
               {creating ? 'Creating Lab...' : 'Create Lab Course'}
@@ -182,7 +182,7 @@ export default function HandsOnLabs() {
               type="button"
               onClick={() => setShowCustomInstructions(!showCustomInstructions)}
               disabled={creating}
-              className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-orange-500 dark:hover:text-orange-400 transition disabled:opacity-50"
+              className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition disabled:opacity-50"
             >
               {showCustomInstructions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               {showCustomInstructions ? 'Hide' : 'Add'} custom instructions
@@ -201,23 +201,23 @@ export default function HandsOnLabs() {
                   disabled={creating}
                   placeholder="e.g., Focus on cloud deployment scenarios, include CI/CD pipeline exercises..."
                   rows={3}
-                  className="w-full px-4 py-3 text-sm border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition outline-none shadow-sm resize-none"
+                  className="w-full px-4 py-3 text-sm border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition outline-none shadow-sm resize-none"
                 />
               </motion.div>
             )}
           </div>
           
           {/* Web Research Toggle */}
-          <div className="flex items-center gap-3 px-4 py-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl border-2 border-orange-100 dark:border-orange-800">
+          <div className="flex items-center gap-3 px-4 py-3 bg-indigo-50 dark:bg-indigo-950/20 rounded-xl border-2 border-indigo-100 dark:border-indigo-900">
             <label className="flex items-center gap-3 cursor-pointer flex-1">
               <input
                 type="checkbox"
                 checked={useWebResearch}
                 onChange={(e) => setUseWebResearch(e.target.checked)}
                 disabled={creating}
-                className="w-5 h-5 rounded border-2 border-orange-300 dark:border-orange-600 text-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-0 cursor-pointer disabled:opacity-50"
+                className="w-5 h-5 rounded border-2 border-indigo-300 dark:border-indigo-700 text-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer disabled:opacity-50"
               />
-              <Globe className={`w-5 h-5 ${useWebResearch ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400'} transition`} />
+              <Globe className={`w-5 h-5 ${useWebResearch ? 'text-indigo-700 dark:text-indigo-400' : 'text-gray-400'} transition`} />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Enrich with web research
                 {tavilyCredits && tavilyCredits.enabled && tavilyCredits.remaining !== undefined && (
@@ -234,7 +234,7 @@ export default function HandsOnLabs() {
       {/* Course List */}
       <section>
         <h3 className="text-xl font-bold mb-6 flex items-center gap-2 dark:text-gray-100">
-          <Play className="w-6 h-6 text-orange-500" />
+          <Play className="w-6 h-6 text-indigo-500" />
           My Lab Courses
         </h3>
         
@@ -267,14 +267,14 @@ export default function HandsOnLabs() {
                         : 'border-gray-200 dark:border-gray-700'
                     }`}
                   >
-                    <h4 className="text-xl font-bold leading-snug tracking-tight mb-4 group-hover:text-orange-500 transition pr-8 dark:text-gray-100">{course.title}</h4>
+                    <h4 className="text-xl font-bold leading-snug tracking-tight mb-4 group-hover:text-indigo-500 transition pr-8 dark:text-gray-100">{course.title}</h4>
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
                       <Clock className="w-4 h-4" />
                       <span>Created {new Date(course.created_at).toLocaleDateString()}</span>
                     </div>
                     {course.total_labs > 0 && (
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="text-orange-500 font-medium">{course.completed_labs}/{course.total_labs}</span>
+                        <span className="text-indigo-500 font-medium">{course.completed_labs}/{course.total_labs}</span>
                         <span className="text-gray-400">labs completed</span>
                       </div>
                     )}
