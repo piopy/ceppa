@@ -8,15 +8,45 @@ import remarkGfm from 'remark-gfm';
 import { ChevronRight, ChevronDown, CheckCircle2, Loader2, Send, BookOpen, FlaskConical, Star, Lightbulb, Terminal, ArrowLeft, Save, RefreshCcw, Maximize2, ChevronLeft, Download, FileText, Zap, MessageCircle, Trash2, Globe, DownloadCloud, RotateCcw, FileText as FileTextIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// Normalizza steps_json v1 (array) / v2 (wrapper) -> {steps, meta}
+function parseLabContent(steps_json) {
+  const empty = { steps: [], meta: { mode: 'guided', objective: '', setup: {}, deliverable: '', reflection: [] } };
+  if (!steps_json) return empty;
+  try {
+    const data = JSON.parse(steps_json);
+    if (Array.isArray(data)) return { steps: data, meta: empty.meta };
+    return {
+      steps: data.steps || [],
+      meta: { mode: data.mode || 'guided', objective: data.objective || '', setup: data.setup || {}, deliverable: data.deliverable || '', reflection: data.reflection || [] },
+    };
+  } catch {
+    return empty;
+  }
+}
+
+// Normalizza indice v1 (array) / v2 ({spine_project, modules})
+function parseIndex(index_json) {
+  try {
+    const data = JSON.parse(index_json);
+    if (Array.isArray(data)) return { spine_project: null, modules: data };
+    return { spine_project: data.spine_project || null, modules: data.modules || [] };
+  } catch {
+    return { spine_project: null, modules: [] };
+  }
+}
+
 export default function LabView() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
-  const [index, setIndex] = useState([]);
+  const [index, setIndex] = useState({ spine_project: null, modules: [] });
   const [generatedLabs, setGeneratedLabs] = useState({});
   const [favoriteLabs, setFavoriteLabs] = useState({});
   const [currentLab, setCurrentLab] = useState(null);
   const [labSteps, setLabSteps] = useState([]);
+  const [labMeta, setLabMeta] = useState({ mode: 'guided', objective: '', setup: {}, deliverable: '', reflection: [] });
+  const [viewMode, setViewMode] = useState('guided'); // toggle Guided/Challenge (solo vista)
+  const [showSetup, setShowSetup] = useState(false);
   const [loading, setLoading] = useState(true);
   const [labLoading, setLabLoading] = useState(false);
   const [notes, setNotes] = useState('');
@@ -43,6 +73,7 @@ export default function LabView() {
   // Regenerate Lab State
   const [showRegenerateModal, setShowRegenerateModal] = useState(false);
   const [regenerateFeedback, setRegenerateFeedback] = useState('');
+  const [regenerateMode, setRegenerateMode] = useState('guided');
   const [regenerating, setRegenerating] = useState(false);
   
   // Q&A State
@@ -61,7 +92,7 @@ export default function LabView() {
     try {
       const res = await client.get(`/hands-on/${courseId}`);
       setCourse(res.data);
-      setIndex(JSON.parse(res.data.index_json));
+      setIndex(parseIndex(res.data.index_json));
     } catch (err) {
       console.error(err);
     } finally {
@@ -110,13 +141,12 @@ export default function LabView() {
       setNotes(res.data.user_notes || '');
       setShowTheory(false); // Start with practice view
 
-      // Parse steps
-      try {
-        const steps = JSON.parse(res.data.steps_json);
-        setLabSteps(Array.isArray(steps) ? steps : []);
-      } catch (e) {
-        setLabSteps([]);
-      }
+      // Parse steps (v1/v2)
+      const { steps, meta } = parseLabContent(res.data.steps_json);
+      setLabSteps(steps);
+      setLabMeta(meta);
+      setViewMode(meta.mode || 'guided');
+      setShowSetup(false);
 
       // Update generated labs map
       setGeneratedLabs(prev => ({
@@ -266,7 +296,7 @@ export default function LabView() {
   };
 
   const getTotalLabs = () => {
-    return index.reduce((acc, module) => acc + (module.labs || module.lessons || []).length, 0);
+    return (index.modules || []).reduce((acc, module) => acc + (module.labs || module.lessons || []).length, 0);
   };
 
   const getGeneratedCount = () => {
@@ -343,20 +373,19 @@ export default function LabView() {
     setRegenerating(true);
     try {
       const res = await client.post(`/hands-on/${course.id}/labs/${currentLab.id}/regenerate`, {
-        feedback: regenerateFeedback
+        feedback: regenerateFeedback,
+        mode: regenerateMode
       });
       setCurrentLab(res.data);
       setSuccessMsg('Lab regenerated successfully!');
       setShowRegenerateModal(false);
       setRegenerateFeedback('');
-      
-      // Parse steps
-      try {
-        const steps = JSON.parse(res.data.steps_json);
-        setLabSteps(Array.isArray(steps) ? steps : []);
-      } catch (e) {
-        setLabSteps([]);
-      }
+
+      // Parse steps (v1/v2)
+      const { steps, meta } = parseLabContent(res.data.steps_json);
+      setLabSteps(steps);
+      setLabMeta(meta);
+      setViewMode(meta.mode || 'guided');
     } catch (err) {
       toast.error('Failed to regenerate lab.');
     } finally {
@@ -383,6 +412,26 @@ export default function LabView() {
           <ArrowLeft className="w-4 h-4" />
           Back to Labs
         </button>
+
+        {/* Spine project banner */}
+        {index.spine_project && (
+          <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-900/50 dark:bg-orange-950/30">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-orange-600 dark:text-orange-400">
+              <FlaskConical className="h-4 w-4" /> Spine project
+            </p>
+            <p className="mt-1 font-bold text-gray-900 dark:text-gray-100">{index.spine_project.title}</p>
+            {index.spine_project.final_deliverable && (
+              <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">Obiettivo finale: {index.spine_project.final_deliverable}</p>
+            )}
+            {(index.spine_project.tech_stack || []).length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {index.spine_project.tech_stack.map((t, i) => (
+                  <span key={i} className="rounded-full bg-white px-2.5 py-0.5 font-mono text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">{t}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {labLoading ? (
           <div className="h-full flex flex-col items-center justify-center space-y-4">
@@ -435,8 +484,13 @@ export default function LabView() {
             </div>
 
             {/* Lab Header */}
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">{currentLab.title}</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">{currentLab.title}</h2>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase ${viewMode === 'challenge' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'}`}>
+                  {viewMode}
+                </span>
+              </div>
               <button
                 onClick={handleToggleCompletion}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition ${
@@ -463,6 +517,58 @@ export default function LabView() {
                     style={{ width: `${totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0}%` }}
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Objective + mode toggle */}
+            {(labMeta.objective || labMeta.deliverable) && (
+              <div className="mb-6 rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  {labMeta.objective && (
+                    <p className="flex-1 text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-bold">Obiettivo:</span> {labMeta.objective}
+                    </p>
+                  )}
+                  <div className="flex rounded-lg border border-gray-300 p-0.5 text-sm font-medium dark:border-gray-600" title="Solo vista: challenge nasconde le istruzioni">
+                    {['guided', 'challenge'].map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setViewMode(m)}
+                        className={`rounded-md px-3 py-1 capitalize transition ${viewMode === m ? 'bg-orange-500 text-white' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {labMeta.deliverable && (
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-bold">Deliverable:</span> {labMeta.deliverable}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Setup (collassabile) */}
+            {labMeta.setup?.needed && (
+              <div className="mb-6 overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setShowSetup(!showSetup)}
+                  className="flex w-full items-center justify-between bg-gray-50 p-4 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-750"
+                >
+                  <span className="flex items-center gap-2 font-bold text-gray-900 dark:text-gray-100">
+                    <Terminal className="h-4 w-4 text-orange-500" /> Setup ambiente {showSetup ? '(nascondi)' : '(mostra)'}
+                  </span>
+                  {showSetup ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+                </button>
+                {showSetup && (
+                  <div className="p-4">
+                    {labMeta.setup.description && <p className="mb-2 text-sm text-gray-600 dark:text-gray-300">{labMeta.setup.description}</p>}
+                    {(labMeta.setup.commands || []).map((cmd, i) => (
+                      <pre key={i} className="mb-2 overflow-x-auto rounded-lg bg-gray-900 p-3 font-mono text-sm text-gray-100">{cmd}</pre>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -535,8 +641,15 @@ export default function LabView() {
                           </span>
                           <h4 className="font-bold text-gray-900 dark:text-gray-100">{step.title}</h4>
                         </div>
-                        
-                        <p className="text-gray-600 dark:text-gray-300 mb-3">{step.description}</p>
+
+                        {/* Challenge: niente istruzioni, solo descrizione */}
+                        {viewMode === 'challenge' ? (
+                          step.description && <p className="text-gray-600 dark:text-gray-300 mb-3">{step.description}</p>
+                        ) : (
+                          (step.instructions || step.description) && (
+                            <p className="text-gray-600 dark:text-gray-300 mb-3 whitespace-pre-line">{step.instructions || step.description}</p>
+                          )
+                        )}
                         
                         {/* Command block */}
                         {step.command && (
@@ -554,16 +667,41 @@ export default function LabView() {
                           </div>
                         )}
                         
-                        {/* Hints */}
-                        {step.hints && step.hints.length > 0 && (
-                          <div className="flex items-start gap-2 mt-2">
-                            <Lightbulb className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {step.hints.map((hint, i) => (
-                                <span key={i} className="block">{i+1}. {hint}</span>
-                              ))}
-                            </div>
+                        {/* Acceptance criteria */}
+                        {(step.acceptance_criteria || []).length > 0 && (
+                          <div className="mb-3 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-950/30">
+                            <p className="mb-1 text-xs font-bold uppercase text-emerald-700 dark:text-emerald-300">Criteri di accettazione</p>
+                            {(step.acceptance_criteria || []).map((c, i) => (
+                              <label key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                <span className="mt-0.5">☐</span> {c}
+                              </label>
+                            ))}
                           </div>
+                        )}
+
+                        {/* Hints: visibili in guided, rivelabili in challenge */}
+                        {step.hints && step.hints.length > 0 && (
+                          viewMode === 'challenge' ? (
+                            <details className="mt-2 text-sm">
+                              <summary className="flex cursor-pointer items-center gap-1 text-yellow-600 dark:text-yellow-400">
+                                <Lightbulb className="h-4 w-4" /> Mostra hint ({step.hints.length})
+                              </summary>
+                              <div className="mt-1 text-gray-500 dark:text-gray-400">
+                                {step.hints.map((hint, i) => (
+                                  <span key={i} className="block">{i+1}. {hint}</span>
+                                ))}
+                              </div>
+                            </details>
+                          ) : (
+                            <div className="flex items-start gap-2 mt-2">
+                              <Lightbulb className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                {step.hints.map((hint, i) => (
+                                  <span key={i} className="block">{i+1}. {hint}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )
                         )}
                       </div>
                     </div>
@@ -571,6 +709,16 @@ export default function LabView() {
                 ))
               )}
             </div>
+
+            {/* Reflection */}
+            {(labMeta.reflection || []).length > 0 && (
+              <div className="mb-8 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-900/50 dark:bg-indigo-950/30">
+                <p className="mb-2 text-sm font-bold text-indigo-700 dark:text-indigo-300">Rifletti</p>
+                {(labMeta.reflection || []).map((q, i) => (
+                  <p key={i} className="text-sm text-gray-700 dark:text-gray-300">• {q}</p>
+                ))}
+              </div>
+            )}
 
             {/* Notes Section */}
             <hr className="my-8 border-gray-200 dark:border-gray-700" />
@@ -888,11 +1036,20 @@ export default function LabView() {
           </div>
           
           <div className="p-2">
-            {index.map((module, mIdx) => (
+            {(index.modules || []).map((module, mIdx) => (
               <div key={mIdx} className="mb-4">
                 <div className="px-4 py-2 font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
                   <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  {module.title}
+                  <span className="flex-1">{module.title}</span>
+                  {module.level && (
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                      module.level === 'foundation' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                      : module.level === 'challenge' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                    }`}>
+                      {module.level}
+                    </span>
+                  )}
                 </div>
                 <div className="space-y-1">
                   {(module.labs || module.lessons || []).map((lab, lIdx) => {
@@ -1067,6 +1224,21 @@ export default function LabView() {
               className="w-full h-40 p-4 border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition resize-none"
               disabled={regenerating}
             />
+            <div className="mt-4 flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Rigenera come:</span>
+              <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 p-0.5 text-sm font-medium">
+                {['guided', 'challenge'].map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setRegenerateMode(m)}
+                    className={`rounded-md px-3 py-1 capitalize transition ${regenerateMode === m ? 'bg-orange-500 text-white' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="flex gap-4 mt-6 justify-end">
               <button
                 onClick={() => {

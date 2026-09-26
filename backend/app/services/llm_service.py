@@ -285,9 +285,11 @@ class LLMService:
         language: str = "en",
         use_web_research: bool = False,
         user=None,
+        target_level: str = None,
     ) -> str:
         """
-        Generate a course index for hands-on/lab courses (30% theory, 70% practice).
+        Indice corso lab v2: spine project + mode tiers (foundation->applied->challenge).
+        Output: {"spine_project": {...}, "modules": [...]} — vedi roadmap_service.demo per formato.
         """
         lang_instruction = LLMService._get_language_instruction(language)
 
@@ -301,43 +303,54 @@ class LLMService:
                 web_context = web_context_result
 
         prompt = f"""
-        Act as an expert hands-on instructor. Create a comprehensive LABORATORY course syllabus for: "{topic}".
+        Act as an expert hands-on instructor. Design a LABORATORY course for: "{topic}".
         {lang_instruction}
 
         {web_context}
 
         {f"Additional User Instructions: {instructions}" if instructions else ""}
+        {f"Target audience level: {target_level} (beginner|intermediate|advanced). Start one notch below it, end one notch above." if target_level else ""}
 
-        IMPORTANT: This is a HANDS-ON / LAB course. Each module should follow the 30/70 rule:
-        - 30% theory (minimal required concepts)
-        - 70% practice (hands-on exercises, real-world labs, coding challenges, practical experiments)
+        CORE DESIGN (mandatory):
+        1. SPINE PROJECT: every lab is a ticket on ONE evolving real project, not isolated snippets.
+           Define "spine_project" with title, final_deliverable (what the student ships at the end),
+           tech_stack (real tools, pinned versions where it matters).
+        2. FADED GUIDANCE: modules regress foundation -> applied -> challenge.
+           Early labs are "guided" (full instructions), later ones "challenge" (objective + acceptance
+           criteria + revealable hints only). Same project, less hand-holding over time.
+        3. SETUP ONCE: environment setup lives in the FIRST lab that needs it ("setup_required": true).
+           Later labs assume the environment is ready and only add increments ("increment": what this lab adds).
+        4. NO TRIVIAL TASKS: every lab ships a "deliverable" plus "acceptance_criteria" (checkable outcomes).
+           Banned as deliverables: creating empty files, mkdir/cd only, echo-to-file, print hello-world.
+           Each lab MUST advance the spine project.
 
-        The output MUST be a valid JSON array of Modules. Each Module has a "title" and a list of "labs".
-        Each lab has a "title", "path" (hierarchical number), and "type" which can be "theory" or "lab".
-        Mix theory and lab types throughout the modules to create the 30/70 balance.
-
-        Example JSON format:
-        [
-            {{
-                "title": "Module 1: Getting Started",
-                "labs": [
-                    {{"title": "Core Concepts of {topic}", "path": "1.1", "type": "theory"}},
-                    {{"title": "Lab: First Hands-on Exercise", "path": "1.2", "type": "lab"}},
-                    {{"title": "Lab: Real-world Scenario", "path": "1.3", "type": "lab"}}
-                ]
+        The output MUST be valid JSON with this exact shape:
+        {{
+            "spine_project": {{
+                "title": "Real project name",
+                "final_deliverable": "What the student ships",
+                "tech_stack": ["tool1", "tool2"]
             }},
-            {{
-                "title": "Module 2: Advanced Practice",
-                "labs": [
-                    {{"title": "Key Theory for Advanced Topics", "path": "2.1", "type": "theory"}},
-                    {{"title": "Lab: Complex Implementation", "path": "2.2", "type": "lab"}},
-                    {{"title": "Lab: Challenge Exercise", "path": "2.3", "type": "lab"}}
-                ]
-            }}
-        ]
+            "modules": [
+                {{
+                    "title": "Module 1: Foundations",
+                    "level": "foundation",
+                    "concepts": ["concept1", "concept2"],
+                    "labs": [
+                        {{"title": "Lab title", "path": "1.1", "type": "theory", "mode": "guided",
+                          "difficulty": 1, "objective": "One-line goal",
+                          "prerequisites": [], "setup_required": true,
+                          "deliverable": "Concrete artifact",
+                          "acceptance_criteria": ["Checkable outcome 1"],
+                          "increment": "What this lab adds to the spine project"}}
+                    ]
+                }}
+            ]
+        }}
+        Levels allowed: "foundation", "applied", "challenge". Types: "theory", "lab". Modes: "guided", "challenge".
+        Difficulty: 1-5, rising across the course. Theory labs introduce concepts; practice labs advance the spine.
 
-        Provide ONLY the JSON output. Do not include markdown formatting (like ```json), just the raw JSON.
-        Make the course deeply practical with real exercises the student can actually perform.
+        Provide ONLY the JSON output. No markdown formatting, just raw JSON.
         """
 
         response = await _get_client(user).chat.completions.create(
@@ -364,10 +377,15 @@ class LLMService:
         language: str = "en",
         use_web_research: bool = False,
         user=None,
+        mode: str = "guided",
+        spine_project: dict = None,
+        prerequisites: list = None,
+        setup_already_done: bool = False,
+        feedback: str = None,
     ) -> str:
         """
-        Generate a lab session with 30% theory and 70% practical steps.
-        Returns a JSON with theory_content (markdown) and steps (array of practical steps).
+        Contenuto lab v2: wrapper {mode, objective, setup, steps[], deliverable, reflection}.
+        Step: instructions (solo guided), acceptance_criteria, hints. Challenge = niente instructions.
         """
         lang_instruction = LLMService._get_language_instruction(language).replace(
             "Respond", "Write the lab"
@@ -388,43 +406,46 @@ class LLMService:
         Act as an expert hands-on instructor. Create a practical LAB session for the course "{topic}" on: "{lab_title}".
         {lang_instruction}
 
-        Course context:
+        Course context (index):
         {context_index}
 
         {web_context}
 
-        IMPORTANT: Follow the 30/70 RULE:
-        - 30% theory: concise, just enough to understand the practical work
-        - 70% practice: detailed step-by-step exercises the student can actually perform
+        Lab mode: "{mode}" (guided|challenge).
+        {f"Spine project: {spine_project}. This lab is one ticket on it: state the increment it adds." if spine_project else ""}
+        {f"Prerequisites (already done by the student): {prerequisites}." if prerequisites else ""}
+        {f"Setup already done: environment is ready, do NOT repeat setup steps." if setup_already_done else "Setup NOT done yet: include a minimal setup section if the lab needs it."}
+        {f"Student feedback on previous version (MUST address): {feedback}" if feedback else ""}
 
-        Output your response as a VALID JSON object with two fields:
-        1. "theory_content": String — Markdown content for the theory part (concise, max 30% of total)
-        2. "steps": Array of objects — Each step has: step_number (int), title (str), description (str), command (str or null for optional terminal command), expected_output (str or null), hints (array of strings or null)
-        
-        Include 5-8 practical steps minimum. Make each step actionable and concrete.
-        For each step, if a terminal command or code snippet is needed, put it in "command".
-        
-        Example JSON output:
+        RULES:
+        - Guided: every step has full "instructions" (commands to type, files to write, what to observe).
+        - Challenge: NO "instructions" — only objective, per-step acceptance_criteria, and revealable "hints".
+        - Every step has checkable "acceptance_criteria". Deliverable = real artifact advancing the spine.
+        - BANNED as tasks: "mkdir X && cd X", "echo ... > file" as the deliverable, hello-world prints,
+          re-explaining setup done in previous labs.
+
+        GOOD example (real task):
+        {{"step_number": 1, "title": "Add JSON export to the CLI",
+          "instructions": "Open cli.py, add --format json using argparse...",
+          "description": "Users need machine-readable output.",
+          "command": "python cli.py --format json > out.json",
+          "expected_output": "Valid JSON file out.json",
+          "acceptance_criteria": ["out.json parses with json.load", "exit code 0 on empty input"],
+          "hints": ["argparse choices=['table','json']"]}}
+
+        BAD example (never do this):
+        {{"title": "Setup the Environment", "command": "mkdir lab-project && cd lab-project",
+          "expected_output": "Directory created successfully"}}
+
+        Output VALID JSON object, exact shape:
         {{
-            "theory_content": "# {lab_title}\\n\\nThis lab covers the practical application of... (concise theory)",
-            "steps": [
-                {{
-                    "step_number": 1,
-                    "title": "Setup the Environment",
-                    "description": "Create a new project directory and initialize...",
-                    "command": "mkdir lab-project && cd lab-project",
-                    "expected_output": "Directory created successfully",
-                    "hints": ["Make sure you're in your home directory first"]
-                }},
-                {{
-                    "step_number": 2,
-                    "title": "Configure Dependencies",
-                    "description": "Install the required packages...",
-                    "command": "pip install -r requirements.txt",
-                    "expected_output": "All packages installed successfully",
-                    "hints": null
-                }}
-            ]
+            "mode": "{mode}",
+            "objective": "One-line goal",
+            "setup": {{"needed": true, "description": "...", "commands": ["..."]}},
+            "theory_content": "Concise markdown theory (max 30%)",
+            "steps": [ ... 5-8 steps as above ... ],
+            "deliverable": "Concrete artifact",
+            "reflection": ["Question 1 for the student"]
         }}
 
         Provide ONLY the JSON output. No markdown formatting. No extra text.

@@ -21,6 +21,7 @@ class HandsOnCourseCreate(BaseModel):
     custom_instructions: Optional[str] = None
     language: Optional[str] = None
     use_web_research: Optional[bool] = False
+    target_level: Optional[str] = None  # beginner|intermediate|advanced
 
 
 class HandsOnCourseUpdate(BaseModel):
@@ -64,8 +65,10 @@ class LabStep(BaseModel):
     step_number: int
     title: str
     description: str
+    instructions: Optional[str] = None  # Solo guided; challenge = nascosto
     command: Optional[str] = None
     expected_output: Optional[str] = None
+    acceptance_criteria: Optional[List[str]] = None
     hints: Optional[List[str]] = None
     is_completed: bool = False
 

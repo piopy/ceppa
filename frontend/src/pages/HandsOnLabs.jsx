@@ -15,6 +15,7 @@ export default function HandsOnLabs() {
   const [newTopic, setNewTopic] = useState('');
   const [language, setLanguage] = useState('it');
   const [customLanguage, setCustomLanguage] = useState('');
+  const [targetLevel, setTargetLevel] = useState('');
   const [useWebResearch, setUseWebResearch] = useState(false);
   const [customInstructions, setCustomInstructions] = useState('');
   const [showCustomInstructions, setShowCustomInstructions] = useState(false);
@@ -64,7 +65,8 @@ export default function HandsOnLabs() {
         topic: newTopic, 
         language: selectedLanguage,
         use_web_research: useWebResearch,
-        custom_instructions: customInstructions || undefined
+        custom_instructions: customInstructions || undefined,
+        target_level: targetLevel || undefined
       });
       setNewTopic('');
       setCustomInstructions('');
@@ -128,6 +130,20 @@ export default function HandsOnLabs() {
               disabled={creating}
               className="flex-1 px-6 py-4 text-lg border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-2xl focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition outline-none shadow-sm"
             />
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700">
+              <select
+                value={targetLevel}
+                onChange={e => setTargetLevel(e.target.value)}
+                disabled={creating}
+                title="Livello di partenza"
+                className="bg-transparent outline-none font-medium text-gray-700 dark:text-gray-300"
+              >
+                <option value="">🎯 Auto level</option>
+                <option value="beginner">🌱 Beginner</option>
+                <option value="intermediate">🚀 Intermediate</option>
+                <option value="advanced">🔥 Advanced</option>
+              </select>
+            </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700">
               <select
                 value={language}

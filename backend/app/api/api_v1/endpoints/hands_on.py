@@ -15,7 +15,12 @@ from app.core.db import get_db
 from app.core.config import settings
 from app.models.base import HandsOnCourse, Lab, User, LabQuestion
 from app.schemas import hands_on as hands_on_schema
-from app.services.hands_on_service import HandsOnService
+from app.services.hands_on_service import (
+    HandsOnService,
+    lab_meta_from_index,
+    normalize_lab_content,
+    _parse_lab_response,
+)
 from app.services.llm_service import LLMService
 from app.services.pdf_service import PDFService
 
@@ -43,6 +48,7 @@ async def create_hands_on_course(
             custom_instructions=course_in.custom_instructions,
             language=course_in.language or "en",
             use_web_research=course_in.use_web_research or False,
+            target_level=course_in.target_level,
         )
         return course
     except Exception as e:
@@ -219,6 +225,7 @@ async def generate_lab(
             lab_title=title,
             path_in_index=path_in_index,
             use_web_research=use_web_research,
+            mode=lab_in.get("mode"),
         )
         return lab
     except Exception as e:
@@ -312,18 +319,7 @@ async def get_lab_pdf(
         md_parts.append("\n\n")
 
     if lab.steps_json:
-        md_parts.append("## Practical Steps\n\n")
-        try:
-            steps = json.loads(lab.steps_json)
-            for step in steps:
-                md_parts.append(f"### Step {step['step_number']}: {step['title']}\n\n")
-                md_parts.append(f"{step['description']}\n\n")
-                if step.get('command'):
-                    md_parts.append(f"```bash\n{step['command']}\n```\n\n")
-                if step.get('expected_output'):
-                    md_parts.append(f"**Expected output:**\n```\n{step['expected_output']}\n```\n\n")
-        except json.JSONDecodeError:
-            md_parts.append(f"{lab.steps_json}\n\n")
+        md_parts.append(_steps_markdown(lab.steps_json))
 
     content_md = "".join(md_parts)
 
@@ -393,6 +389,7 @@ async def regenerate_lab(
             hands_on_course=course,
             feedback=user_feedback,
             use_web_research=False,
+            mode=feedback.get("mode"),
         )
         return updated_lab
     except Exception as e:
@@ -606,14 +603,15 @@ async def generate_all_labs(
     if not course:
         raise HTTPException(status_code=404, detail="Hands-on course not found")
 
-    # Parse index to get all labs
+    # Parse index to get all labs (v1 array o v2 dict)
     try:
         index_data = json.loads(course.index_json)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Invalid course index: {str(e)}")
 
+    modules = index_data.get("modules", index_data) if isinstance(index_data, dict) else index_data
     all_labs = []
-    for module in index_data:
+    for module in modules:
         for lab in module.get("labs", []):
             all_labs.append(
                 {
@@ -718,6 +716,7 @@ async def generate_labs_background(
     async def generate_single_lab(lab_data):
         async with semaphore:
             try:
+                meta = lab_meta_from_index(index_json, lab_data["path"])
                 # Generate content
                 lab_json_str = await LLMService.generate_lab_content(
                     course_title,
@@ -726,13 +725,13 @@ async def generate_labs_background(
                     language,
                     use_web_research=use_web_research,
                     user=user,
+                    mode=meta["mode"],
+                    spine_project=meta["spine_project"],
+                    prerequisites=meta["prerequisites"],
+                    setup_already_done=meta["setup_already_done"],
                 )
 
-                # Parse JSON
-                lab_content = json.loads(lab_json_str)
-                theory_content = lab_content.get("theory_content", "")
-                steps = lab_content.get("steps", [])
-                steps_json = json.dumps(steps)
+                theory_content, steps_json = _parse_lab_response(lab_json_str)
 
                 # Save to database
                 async with AsyncSessionLocal() as session:
@@ -784,6 +783,39 @@ def natural_sort_key(path_in_index: str):
         int(text) if text.isdigit() else text.lower()
         for text in re.split("([0-9]+)", path_in_index)
     ]
+
+
+def _steps_markdown(steps_json: str) -> str:
+    """steps v1 (array) / v2 (wrapper) -> markdown, criteri inclusi."""
+    try:
+        content = normalize_lab_content(steps_json)
+    except Exception:
+        return f"{steps_json}\n\n"
+    parts = ["## Practical Steps\n\n"]
+    setup = content.get("setup") or {}
+    if setup.get("needed"):
+        parts.append("### Setup\n\n")
+        if setup.get("description"):
+            parts.append(f"{setup['description']}\n\n")
+        for cmd in setup.get("commands") or []:
+            parts.append(f"```bash\n{cmd}\n```\n\n")
+    for step in content.get("steps") or []:
+        parts.append(f"### Step {step.get('step_number')}: {step.get('title')}\n\n")
+        body = step.get("instructions") or step.get("description") or ""
+        if body:
+            parts.append(f"{body}\n\n")
+        if step.get("command"):
+            parts.append(f"```bash\n{step['command']}\n```\n\n")
+        if step.get("expected_output"):
+            parts.append(f"**Expected output:**\n```\n{step['expected_output']}\n```\n\n")
+        criteria = step.get("acceptance_criteria") or []
+        if criteria:
+            parts.append("**Acceptance criteria:**\n\n")
+            parts.extend(f"- [ ] {c}\n" for c in criteria)
+            parts.append("\n")
+    if content.get("deliverable"):
+        parts.append(f"**Deliverable:** {content['deliverable']}\n\n")
+    return "".join(parts)
 
 
 @router.get("/{course_id}/download-full-pdf")
@@ -841,19 +873,9 @@ async def download_full_course_pdf(
         merged_md_parts.append("## Theory Background\n\n")
         if lab.theory_content:
             merged_md_parts.append(lab.theory_content)
-        merged_md_parts.append("\n\n## Practical Steps\n\n")
+        merged_md_parts.append("\n\n")
         if lab.steps_json:
-            try:
-                steps = json.loads(lab.steps_json)
-                for step in steps:
-                    merged_md_parts.append(f"### Step {step['step_number']}: {step['title']}\n\n")
-                    merged_md_parts.append(f"{step['description']}\n\n")
-                    if step.get('command'):
-                        merged_md_parts.append(f"```bash\n{step['command']}\n```\n\n")
-                    if step.get('expected_output'):
-                        merged_md_parts.append(f"**Expected output:**\n```\n{step['expected_output']}\n```\n\n")
-            except json.JSONDecodeError:
-                merged_md_parts.append(f"{lab.steps_json}\n\n")
+            merged_md_parts.append(_steps_markdown(lab.steps_json))
         merged_md_parts.append("\n\\newpage\n\n")
 
     merged_md = "".join(merged_md_parts)
@@ -936,19 +958,9 @@ async def download_full_course_epub(
         merged_md_parts.append("## Theory Background\n\n")
         if lab.theory_content:
             merged_md_parts.append(lab.theory_content)
-        merged_md_parts.append("\n\n## Practical Steps\n\n")
+        merged_md_parts.append("\n\n")
         if lab.steps_json:
-            try:
-                steps = json.loads(lab.steps_json)
-                for step in steps:
-                    merged_md_parts.append(f"### Step {step['step_number']}: {step['title']}\n\n")
-                    merged_md_parts.append(f"{step['description']}\n\n")
-                    if step.get('command'):
-                        merged_md_parts.append(f"```bash\n{step['command']}\n```\n\n")
-                    if step.get('expected_output'):
-                        merged_md_parts.append(f"**Expected output:**\n```\n{step['expected_output']}\n```\n\n")
-            except json.JSONDecodeError:
-                merged_md_parts.append(f"{lab.steps_json}\n\n")
+            merged_md_parts.append(_steps_markdown(lab.steps_json))
         merged_md_parts.append("\n\n")
 
     merged_md = "".join(merged_md_parts)
