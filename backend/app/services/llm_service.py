@@ -1,5 +1,6 @@
 import json
 import os
+import uuid
 import logging
 from openai import AsyncOpenAI
 import httpx
@@ -35,7 +36,36 @@ def _get_client(user=None) -> AsyncOpenAI:
     else:
         api_key = settings.OPENAI_API_KEY
         base_url = settings.OPENAI_BASE_URL
-    return AsyncOpenAI(api_key=api_key, base_url=base_url)
+    # opencode zen/go: routing efficiente vuole sessione stabile + user agent proprio
+    # https://opencode.ai/docs/go/#where-can-i-use-it
+    headers = None
+    if base_url and "opencode.ai/zen/go" in base_url:
+        headers = {"x-opencode-session": _SESSION_ID, "user-agent": "ceppa/1.0"}
+    return AsyncOpenAI(api_key=api_key, base_url=base_url, default_headers=headers)
+
+
+# Sessione stabile per boot (prompt caching + routing zen/go)
+_SESSION_ID = uuid.uuid4().hex
+
+# Modelli serviti via Responses API su zen/go (non chat/completions)
+_RESPONSES_PREFIXES = ("muse-spark-",)
+
+
+async def _complete(user, messages: list, temperature: float = 0.7, max_tokens: int = None) -> str:
+    """Testo risposta via chat o Responses API (zen/go + muse-spark)."""
+    client = _get_client(user)
+    model = _get_model(user)
+    if "opencode.ai/zen/go" in str(client.base_url) and model.startswith(_RESPONSES_PREFIXES):
+        kwargs = {"model": model, "input": messages, "temperature": temperature}
+        if max_tokens:
+            kwargs["max_output_tokens"] = max_tokens
+        response = await client.responses.create(**kwargs)
+        return response.output_text.strip()
+    kwargs = {"model": model, "messages": messages, "temperature": temperature}
+    if max_tokens:
+        kwargs["max_tokens"] = max_tokens
+    response = await client.chat.completions.create(**kwargs)
+    return response.choices[0].message.content.strip()
 
 
 def _get_model(user=None) -> str:
@@ -95,38 +125,33 @@ class LLMService:
                 )
 
         prompt = f"""
-        Act as an expert curriculum designer. create a comprehensive and detailed course syllabus for the topic: "{topic}".
+        Act as an expert curriculum designer. Create a comprehensive and detailed course syllabus for the topic: "{topic}".
         {lang_instruction}
-        
+
         {web_context}
-        
+
         {f"Additional User Instructions: {instructions}" if instructions else ""}
 
-        The output MUST be a valid JSON array of Modules. Each Module has a "title" and a list of "lessons".
-        Each Lesson has a "title" and a "path". The path should be a hierarchical number string (e.g. "1.1", "1.2").
-        
-        Example JSON format:
-        [
-            {{
-                "title": "Module 1: Introduction",
-                "lessons": [
-                    {{"title": "What is {topic}?", "path": "1.1"}},
-                    {{"title": "Setup and Installation", "path": "1.2"}}
-                ]
-            }}
-        ]
-        
+        STRUCTURE (no example provided on purpose: tailor the breakdown to THIS topic, not to a template):
+        - At least 5 modules, at least 4 lessons each (20+ lessons total for a normal topic; more if the topic is vast).
+        - Progression: fundamentals first, then practice, then advanced topics. Each module harder than the previous.
+        - Every module MUST contain: core concepts, at least one hands-on/applied lesson, common mistakes or pitfalls.
+        - The last module MUST be a capstone: a real end-to-end project or synthesis, not a summary.
+        - Banned filler lessons: generic "Introduction", "Conclusion", "Overview", "Summary" as standalone lessons
+          (fold intro material into the first real lesson, synthesis into the capstone).
+        - Lesson titles specific and non-overlapping: a reader must tell lessons apart by title alone.
+        - Paths are hierarchical numbers: module N uses "N.1", "N.2", ...
+
+        The output MUST be a valid JSON array. Shape only (keys and types):
+        [{{"title": str, "lessons": [{{"title": str, "path": str}}]}}]
+
         Provide ONLY the JSON output. Do not include markdown formatting (like ```json), just the raw JSON.
-        Make the course deep and comprehensive.
         """
 
-        response = await _get_client(user).chat.completions.create(
-            model=_get_model(user),
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
+        content = await _complete(
+            user, [{"role": "user", "content": prompt}], max_tokens=4000
         )
 
-        content = response.choices[0].message.content.strip()
         # Simple cleanup if the LLM wraps in code blocks despite instructions
         if content.startswith("```json"):
             content = content[7:]
@@ -197,13 +222,9 @@ class LLMService:
         Make it engaging and clear.{feedback_instruction}
         """
 
-        response = await _get_client(user).chat.completions.create(
-            model=_get_model(user),
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-        )
+        content = await _complete(user, [{"role": "user", "content": prompt}])
 
-        return response.choices[0].message.content.strip()
+        return content
 
     @staticmethod
     async def answer_lab_question(
@@ -278,13 +299,9 @@ class LLMService:
         - If no web sources were used, don't add the Fonti section
         """
 
-        response = await _get_client(user).chat.completions.create(
-            model=_get_model(user),
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-        )
+        content = await _complete(user, [{"role": "user", "content": prompt}])
 
-        return response.choices[0].message.content.strip()
+        return content
 
     @staticmethod
     async def generate_hands_on_course_index(
@@ -361,13 +378,8 @@ class LLMService:
         Provide ONLY the JSON output. No markdown formatting, just raw JSON.
         """
 
-        response = await _get_client(user).chat.completions.create(
-            model=_get_model(user),
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-        )
+        content = await _complete(user, [{"role": "user", "content": prompt}])
 
-        content = response.choices[0].message.content.strip()
         if content.startswith("```json"):
             content = content[7:]
         if content.startswith("```"):
@@ -460,13 +472,8 @@ class LLMService:
         Make sure the steps are realistic and the commands are correct for the topic.
         """
 
-        response = await _get_client(user).chat.completions.create(
-            model=_get_model(user),
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-        )
+        content = await _complete(user, [{"role": "user", "content": prompt}])
 
-        content = response.choices[0].message.content.strip()
         if content.startswith("```json"):
             content = content[7:]
         if content.startswith("```"):
@@ -539,10 +546,6 @@ class LLMService:
         - If no web sources were used, don't add the Fonti section
         """
 
-        response = await _get_client(user).chat.completions.create(
-            model=_get_model(user),
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-        )
+        content = await _complete(user, [{"role": "user", "content": prompt}])
 
-        return response.choices[0].message.content.strip()
+        return content
