@@ -19,6 +19,7 @@ from app.schemas import hands_on as hands_on_schema
 from app.services.hands_on_service import (
     HandsOnService,
     lab_meta_from_index,
+    normalize_course_index,
     normalize_lab_content,
     _parse_lab_response,
 )
