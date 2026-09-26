@@ -213,9 +213,11 @@ class LLMService:
         question: str,
         language: str = "en",
         user=None,
+        history: list = None,
     ) -> str:
         """
         Answer a user question about a specific lab using lab context.
+        history: lista {role, content} ultimi turni chat.
         """
         lang_instruction = LLMService._get_language_instruction(language)
 
@@ -238,6 +240,12 @@ class LLMService:
         if web_context_result:
             web_context = web_context_result
 
+        # History chat: ultimi 20 turni, 2000ch max
+        history_block = ""
+        if history:
+            turns = [f"{h.get('role', 'user')}: {(h.get('content') or '')[:2000]}" for h in history[-20:]]
+            history_block = "Previous conversation:\n" + "\n".join(turns) + "\n"
+
         prompt = f"""
         You are a helpful teaching assistant for a hands-on lab course. 
         A student is working on the lab "{lab_title}".
@@ -255,7 +263,7 @@ class LLMService:
 
         {web_context}
 
-        The student asks: "{question}"
+        {history_block}The student asks: "{question}"
 
         Provide a clear, educational answer based on the lab content and any current web information provided above.
         Focus on practical guidance and helping the student complete the lab exercises.
@@ -475,9 +483,11 @@ class LLMService:
         question: str,
         language: str = "en",
         user=None,
+        history: list = None,
     ) -> str:
         """
         Answer a user question about a specific lesson using lesson context.
+        history: lista {role, content} ultimi turni chat (costo token limitato).
         Uses Tavily to get current information if relevant.
         """
         lang_instruction = LLMService._get_language_instruction(language)
@@ -498,6 +508,12 @@ class LLMService:
         if web_context_result:
             web_context = web_context_result
 
+        # History chat: ultimi 20 turni, 2000ch max (single-user: costo ok)
+        history_block = ""
+        if history:
+            turns = [f"{h.get('role', 'user')}: {(h.get('content') or '')[:2000]}" for h in history[-20:]]
+            history_block = "Previous conversation:\n" + "\n".join(turns) + "\n"
+
         prompt = f"""
         You are a helpful teaching assistant. A student is studying the lesson "{lesson_title}".
         {lang_instruction}
@@ -509,7 +525,7 @@ class LLMService:
 
         {web_context}
 
-        The student asks: "{question}"
+        {history_block}The student asks: "{question}"
 
         Provide a clear, educational answer based on the lesson content and any current web information provided above.
         If the question is not related to the lesson, politely redirect them to ask questions about the lesson topic.

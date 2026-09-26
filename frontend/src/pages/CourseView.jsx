@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import { toast } from 'sonner';
 import { confirmDialog } from '../components/ui';
+import { Thread, ChatPanel, chainFor } from '../components/qa';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle, Maximize2, ChevronLeft, DownloadCloud, Trash2, Globe, Save, Star } from 'lucide-react';
@@ -25,11 +26,12 @@ export default function CourseView() {
   const [generatingAll, setGeneratingAll] = useState(false);
   const [generationStatus, setGenerationStatus] = useState(null);
   
-  // Q&A State
+  // Q&A State (thread + chat)
   const [questions, setQuestions] = useState([]);
-  const [newQuestion, setNewQuestion] = useState('');
   const [askingQuestion, setAskingQuestion] = useState(false);
   const [deletingQuestion, setDeletingQuestion] = useState(null);
+  const [chat, setChat] = useState(null); // {cid, messages}
+  const [chatSending, setChatSending] = useState(false);
   
   // Immersive Mode & Sidebar Visibility
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
@@ -154,17 +156,16 @@ export default function CourseView() {
     }
   };
 
-  const handleAskQuestion = async (e) => {
-    e.preventDefault();
-    if (!newQuestion.trim() || !currentLesson) return;
-    
+  const handleAskQuestion = async (text, parentId) => {
+    if (!currentLesson) return;
+
     setAskingQuestion(true);
     try {
-      const res = await client.post(`/lessons/${currentLesson.id}/ask`, {
-        question: newQuestion
+      await client.post(`/lessons/${currentLesson.id}/ask`, {
+        question: text, parent_id: parentId || undefined
       });
-      setQuestions([res.data, ...questions]);
-      setNewQuestion('');
+      const res = await client.get(`/lessons/${currentLesson.id}/questions`);
+      setQuestions(res.data);
     } catch (err) {
       toast.error('Failed to ask question. Please try again.');
     } finally {
@@ -173,16 +174,44 @@ export default function CourseView() {
   };
 
   const handleDeleteQuestion = async (questionId) => {
-    if (!await confirmDialog({ title: 'Eliminare domanda?', confirmLabel: 'Elimina', danger: true })) return;
-    
+    if (!await confirmDialog({ title: 'Eliminare domanda?', message: 'Verranno eliminate anche le risposte annidate.', confirmLabel: 'Elimina', danger: true })) return;
+
     setDeletingQuestion(questionId);
     try {
       await client.delete(`/lessons/${currentLesson.id}/questions/${questionId}`);
-      setQuestions(questions.filter(q => q.id !== questionId));
+      const res = await client.get(`/lessons/${currentLesson.id}/questions`);
+      setQuestions(res.data);
     } catch (err) {
       toast.error('Failed to delete question. Please try again.');
     } finally {
       setDeletingQuestion(null);
+    }
+  };
+
+  const handleStartChat = async (node) => {
+    try {
+      const res = await client.post(`/lessons/${currentLesson.id}/questions/${node.id}/chat`);
+      // Pannello con thread intero, non solo seed singolo
+      setChat({ cid: res.data.conversation_id, messages: chainFor(questions, node), parent: res.data.parent_id });
+    } catch (err) {
+      toast.error('Failed to start chat.');
+    }
+  };
+
+  const handleChatSend = async (text) => {
+    if (!chat) return;
+    setChatSending(true);
+    const parent = chat.parent || undefined;
+    setChat((c) => ({ ...c, parent: null, messages: [...c.messages, { role: 'user', content: text }] }));
+    try {
+      const res = await client.post(`/lessons/${currentLesson.id}/chat/${chat.cid}/messages`, { content: text, parent_id: parent });
+      setChat((c) => ({ ...c, messages: [...c.messages, { role: 'assistant', content: res.data.answer }] }));
+      const qres = await client.get(`/lessons/${currentLesson.id}/questions`);
+      setQuestions(qres.data);
+    } catch (err) {
+      toast.error('Failed to send message.');
+    } finally {
+      setChatSending(false);
     }
   };
 
@@ -531,93 +560,17 @@ export default function CourseView() {
                 <MessageCircle className="w-6 h-6 text-primary" />
                 Ask the AI Assistant
               </h3>
-              
-              <form onSubmit={handleAskQuestion} className="mb-8">
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    placeholder="Ask a question about this lesson..."
-                    value={newQuestion}
-                    onChange={(e) => setNewQuestion(e.target.value)}
-                    disabled={askingQuestion}
-                    className="flex-1 px-4 py-3 border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition"
-                  />
-                  <button
-                    type="submit"
-                    disabled={askingQuestion || !newQuestion.trim()}
-                    className="px-6 py-3 bg-primary text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium transition"
-                  >
-                    {askingQuestion ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Asking...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-5 h-5" />
-                        Ask
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-              
-              {/* Questions List */}
-              <div className="space-y-6">
-                {questions.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-                    <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-500 dark:text-gray-400 font-medium">No questions yet</p>
-                    <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Be the first to ask something about this lesson!</p>
-                  </div>
-                ) : (
-                  questions.map((qa) => (
-                    <motion.div
-                      key={qa.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="relative group bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm"
-                    >
-                      {/* Delete Button */}
-                      <button
-                        onClick={() => handleDeleteQuestion(qa.id)}
-                        disabled={deletingQuestion === qa.id}
-                        className="absolute top-4 right-4 p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50 opacity-0 group-hover:opacity-100"
-                        title="Elimina domanda"
-                      >
-                        {deletingQuestion === qa.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </button>
-                      
-                      <div className="mb-4">
-                        <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-primary font-bold text-sm">Q</span>
-                          </div>
-                          <div className="flex-1 pr-8">
-                            <p className="text-gray-800 dark:text-gray-200 font-medium">{qa.question}</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                              {new Date(qa.created_at).toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3 ml-0 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                          <span className="text-green-600 font-bold text-sm">A</span>
-                        </div>
-                        <div className="flex-1 prose prose-sm dark:prose-invert max-w-none">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{qa.answer}</ReactMarkdown>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
-              </div>
+
+              <Thread
+                items={questions}
+                onAsk={handleAskQuestion}
+                onDelete={handleDeleteQuestion}
+                onChat={handleStartChat}
+                asking={askingQuestion}
+                deletingId={deletingQuestion}
+              />
             </section>
+            <ChatPanel chat={chat} onSend={handleChatSend} sending={chatSending} onClose={() => setChat(null)} />
           </motion.div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-gray-400">

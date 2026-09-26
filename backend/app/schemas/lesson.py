@@ -33,12 +33,21 @@ class LessonUpdate(BaseModel):
 
 class QuestionCreate(BaseModel):
     question: str
+    parent_id: Optional[int] = None  # Rispondi dentro thread
+
+
+class ChatMessageCreate(BaseModel):
+    content: str
+    parent_id: Optional[int] = None  # Primo messaggio: aggancia al commento di partenza
 
 
 class QuestionOut(BaseModel):
     id: int
     question: str
-    answer: str
+    answer: Optional[str] = None
+    parent_id: Optional[int] = None
+    role: Optional[str] = None
+    conversation_id: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

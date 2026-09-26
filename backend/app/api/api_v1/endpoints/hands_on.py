@@ -3,10 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func
+from sqlalchemy import func, delete
 import json
 import asyncio
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,24 @@ router = APIRouter()
 
 # Store generation status for hands-on courses in memory
 generation_status = {}
+
+
+async def _owns_lab_course(db: AsyncSession, user_id: int, course_id: int) -> bool:
+    res = await db.execute(
+        select(HandsOnCourse).where(
+            HandsOnCourse.id == course_id, HandsOnCourse.user_id == user_id
+        )
+    )
+    return res.scalars().first() is not None
+
+
+async def _get_lab_course(db: AsyncSession, user_id: int, course_id: int):
+    res = await db.execute(
+        select(HandsOnCourse).where(
+            HandsOnCourse.id == course_id, HandsOnCourse.user_id == user_id
+        )
+    )
+    return res.scalars().first()
 
 
 # ---- HandsOnCourse Endpoints ---- #
@@ -479,6 +498,23 @@ async def ask_lab_question(
     if not lab:
         raise HTTPException(status_code=404, detail="Lab not found")
 
+    # Thread: parent + conversation, history = catena completa
+    parent = None
+    history = []
+    cid = uuid.uuid4().hex[:12]
+    if question_in.parent_id:
+        p_res = await db.execute(
+            select(LabQuestion).where(
+                LabQuestion.id == question_in.parent_id, LabQuestion.lab_id == lab_id
+            )
+        )
+        parent = p_res.scalars().first()
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent question not found")
+        cid = parent.conversation_id or uuid.uuid4().hex[:12]
+        from app.api.qa_utils import thread_history
+        history = await thread_history(db, LabQuestion, "lab_id", lab_id, parent.id)
+
     # Generate answer using LLM
     try:
         answer = await LLMService.answer_lab_question(
@@ -488,23 +524,119 @@ async def ask_lab_question(
             question=question_in.question,
             language=getattr(course, "language", "en"),
             user=current_user,
+            history=history,
         )
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to generate answer: {str(e)}"
         )
 
-    # Save question and answer to database
-    question_obj = LabQuestion(
-        lab_id=lab_id,
-        question=question_in.question,
-        answer=answer,
+    # Riga utente + riga AI figlia
+    user_row = LabQuestion(
+        lab_id=lab_id, question=question_in.question, answer=None,
+        parent_id=question_in.parent_id, role="user", conversation_id=cid,
     )
-    db.add(question_obj)
+    db.add(user_row)
+    await db.flush()
+    assistant_row = LabQuestion(
+        lab_id=lab_id, question=question_in.question, answer=answer,
+        parent_id=user_row.id, role="assistant", conversation_id=cid,
+    )
+    db.add(assistant_row)
     await db.commit()
-    await db.refresh(question_obj)
+    await db.refresh(assistant_row)
 
-    return question_obj
+    return assistant_row
+
+
+@router.post("/{course_id}/labs/{lab_id}/questions/{question_id}/chat")
+async def start_lab_chat(
+    course_id: int,
+    lab_id: int,
+    question_id: int,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Avvia chat lineare da un commento lab."""
+    if not await _owns_lab_course(db, current_user.id, course_id):
+        raise HTTPException(status_code=404, detail="Hands-on course not found")
+    q_res = await db.execute(
+        select(LabQuestion).where(LabQuestion.id == question_id, LabQuestion.lab_id == lab_id)
+    )
+    q = q_res.scalars().first()
+    if not q:
+        raise HTTPException(status_code=404, detail="Question not found")
+    seed = [{"role": "user", "content": q.question}]
+    if q.answer:
+        seed.append({"role": "assistant", "content": q.answer})
+    return {"conversation_id": q.conversation_id or uuid.uuid4().hex[:12], "seed": seed, "parent_id": q.id}
+
+
+@router.post("/{course_id}/labs/{lab_id}/chat/{conversation_id}/messages", response_model=hands_on_schema.LabQuestionOut)
+async def post_lab_chat_message(
+    course_id: int,
+    lab_id: int,
+    conversation_id: str,
+    msg_in: hands_on_schema.LabChatMessageCreate,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Turno chat lab con history."""
+    course = await _get_lab_course(db, current_user.id, course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Hands-on course not found")
+    lab_res = await db.execute(
+        select(Lab).where(Lab.id == lab_id, Lab.hands_on_course_id == course_id)
+    )
+    lab = lab_res.scalars().first()
+    if not lab:
+        raise HTTPException(status_code=404, detail="Lab not found")
+
+    prev_res = await db.execute(
+        select(LabQuestion)
+        .where(LabQuestion.lab_id == lab_id, LabQuestion.conversation_id == conversation_id)
+        .order_by(LabQuestion.created_at.asc())
+    )
+    prev = prev_res.scalars().all()
+    history = [
+        {"role": r.role or ("assistant" if r.answer else "user"), "content": r.answer or r.question}
+        for r in prev
+    ]
+    parent_id = msg_in.parent_id or (prev[-1].id if prev else None)
+    if parent_id:
+        p_check = await db.execute(
+            select(LabQuestion).where(LabQuestion.id == parent_id, LabQuestion.lab_id == lab_id)
+        )
+        if not p_check.scalars().first():
+            raise HTTPException(status_code=404, detail="Parent question not found")
+
+    try:
+        answer = await LLMService.answer_lab_question(
+            lab_title=lab.title,
+            lab_theory=lab.theory_content,
+            lab_steps=lab.steps_json,
+            question=msg_in.content,
+            language=getattr(course, "language", "en"),
+            user=current_user,
+            history=history,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate answer: {str(e)}")
+
+    user_row = LabQuestion(
+        lab_id=lab_id, question=msg_in.content, answer=None,
+        parent_id=parent_id, role="user", conversation_id=conversation_id,
+    )
+    db.add(user_row)
+    await db.flush()
+    assistant_row = LabQuestion(
+        lab_id=lab_id, question=msg_in.content, answer=answer,
+        parent_id=user_row.id, role="assistant", conversation_id=conversation_id,
+    )
+    db.add(assistant_row)
+    await db.commit()
+    await db.refresh(assistant_row)
+    return assistant_row
 
 
 @router.get("/{course_id}/labs/{lab_id}/questions", response_model=list[hands_on_schema.LabQuestionOut])
@@ -569,8 +701,18 @@ async def delete_lab_question(
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
 
-    # Delete the question
-    await db.delete(question)
+    # Delete + discendenti thread (un solo statement: niente problemi FK self)
+    to_delete = [question]
+    idx = 0
+    while idx < len(to_delete):
+        kids = await db.execute(
+            select(LabQuestion).where(LabQuestion.parent_id == to_delete[idx].id)
+        )
+        to_delete.extend(kids.scalars().all())
+        idx += 1
+    await db.execute(
+        delete(LabQuestion).where(LabQuestion.id.in_([r.id for r in to_delete]))
+    )
     await db.commit()
 
     return {"message": "Question deleted successfully"}

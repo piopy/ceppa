@@ -100,13 +100,22 @@ class LabUpdate(BaseModel):
 
 class LabQuestionCreate(BaseModel):
     question: str
+    parent_id: Optional[int] = None
+
+
+class LabChatMessageCreate(BaseModel):
+    content: str
+    parent_id: Optional[int] = None
 
 
 class LabQuestionOut(BaseModel):
     id: int
     lab_id: int
     question: str
-    answer: str
+    answer: Optional[str] = None
+    parent_id: Optional[int] = None
+    role: Optional[str] = None
+    conversation_id: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

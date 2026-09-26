@@ -3,7 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import delete
 import os
+import uuid
 
 from app.api import deps
 from app.core.db import get_db
@@ -234,6 +236,7 @@ async def ask_question(
 ) -> Any:
     """
     Ask a question about a lesson and get an LLM-generated answer.
+    parent_id opzionale: risposta annidata nel thread (riga utente + riga AI figlia).
     """
     # Get lesson and verify ownership
     result = await db.execute(
@@ -249,6 +252,24 @@ async def ask_question(
     course_res = await db.execute(select(Course).where(Course.id == lesson.course_id))
     course = course_res.scalars().first()
 
+    # Thread: risolvi parent + conversation, history = catena completa
+    parent = None
+    history = []
+    cid = uuid.uuid4().hex[:12]
+    if question_in.parent_id:
+        p_res = await db.execute(
+            select(LessonQuestion).where(
+                LessonQuestion.id == question_in.parent_id,
+                LessonQuestion.lesson_id == lesson_id,
+            )
+        )
+        parent = p_res.scalars().first()
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent question not found")
+        cid = parent.conversation_id or uuid.uuid4().hex[:12]
+        from app.api.qa_utils import thread_history
+        history = await thread_history(db, LessonQuestion, "lesson_id", lesson_id, parent.id)
+
     # Generate answer using LLM
     try:
         answer = await LLMService.answer_lesson_question(
@@ -257,23 +278,140 @@ async def ask_question(
             question=question_in.question,
             language=getattr(course, "language", "en"),
             user=current_user,
+            history=history,
         )
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to generate answer: {str(e)}"
         )
 
-    # Save question and answer to database
-    question_obj = LessonQuestion(
+    # Riga utente + riga AI figlia (un messaggio per riga)
+    user_row = LessonQuestion(
+        lesson_id=lesson_id,
+        question=question_in.question,
+        answer=None,
+        parent_id=question_in.parent_id,
+        role="user",
+        conversation_id=cid,
+    )
+    db.add(user_row)
+    await db.flush()
+    assistant_row = LessonQuestion(
         lesson_id=lesson_id,
         question=question_in.question,
         answer=answer,
+        parent_id=user_row.id,
+        role="assistant",
+        conversation_id=cid,
     )
-    db.add(question_obj)
+    db.add(assistant_row)
     await db.commit()
-    await db.refresh(question_obj)
+    await db.refresh(assistant_row)
 
-    return question_obj
+    return assistant_row
+
+
+@router.post("/{lesson_id}/questions/{question_id}/chat")
+async def start_chat(
+    lesson_id: int,
+    question_id: int,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Avvia una chat lineare da un commento: ritorna conversation_id + seed."""
+    result = await db.execute(
+        select(Lesson)
+        .join(Course)
+        .where(Lesson.id == lesson_id, Course.user_id == current_user.id)
+    )
+    if not result.scalars().first():
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    q_res = await db.execute(
+        select(LessonQuestion).where(
+            LessonQuestion.id == question_id, LessonQuestion.lesson_id == lesson_id
+        )
+    )
+    q = q_res.scalars().first()
+    if not q:
+        raise HTTPException(status_code=404, detail="Question not found")
+    # Riusa conversation del thread se esiste: chat e thread condividono memoria
+    cid = q.conversation_id or uuid.uuid4().hex[:12]
+    seed = [{"role": "user", "content": q.question}]
+    if q.answer:
+        seed.append({"role": "assistant", "content": q.answer})
+    return {"conversation_id": cid, "seed": seed, "parent_id": q.id}
+
+
+@router.post("/{lesson_id}/chat/{conversation_id}/messages", response_model=lesson_schema.QuestionOut)
+async def post_chat_message(
+    lesson_id: int,
+    conversation_id: str,
+    msg_in: lesson_schema.ChatMessageCreate,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Turno chat: history della conversazione passata al LLM, righe accodate."""
+    result = await db.execute(
+        select(Lesson)
+        .join(Course)
+        .where(Lesson.id == lesson_id, Course.user_id == current_user.id)
+    )
+    lesson = result.scalars().first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    course_res = await db.execute(select(Course).where(Course.id == lesson.course_id))
+    course = course_res.scalars().first()
+
+    prev_res = await db.execute(
+        select(LessonQuestion)
+        .where(
+            LessonQuestion.lesson_id == lesson_id,
+            LessonQuestion.conversation_id == conversation_id,
+        )
+        .order_by(LessonQuestion.created_at.asc())
+    )
+    prev = prev_res.scalars().all()
+    history = [
+        {"role": r.role or ("assistant" if r.answer else "user"), "content": r.answer or r.question}
+        for r in prev
+    ]
+    # Primo messaggio: aggancia al commento di partenza; poi catena lineare
+    parent_id = msg_in.parent_id or (prev[-1].id if prev else None)
+    if parent_id:
+        p_check = await db.execute(
+            select(LessonQuestion).where(
+                LessonQuestion.id == parent_id, LessonQuestion.lesson_id == lesson_id
+            )
+        )
+        if not p_check.scalars().first():
+            raise HTTPException(status_code=404, detail="Parent question not found")
+
+    try:
+        answer = await LLMService.answer_lesson_question(
+            lesson_title=lesson.title,
+            lesson_content=lesson.content_markdown,
+            question=msg_in.content,
+            language=getattr(course, "language", "en"),
+            user=current_user,
+            history=history,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate answer: {str(e)}")
+
+    user_row = LessonQuestion(
+        lesson_id=lesson_id, question=msg_in.content, answer=None,
+        parent_id=parent_id, role="user", conversation_id=conversation_id,
+    )
+    db.add(user_row)
+    await db.flush()
+    assistant_row = LessonQuestion(
+        lesson_id=lesson_id, question=msg_in.content, answer=answer,
+        parent_id=user_row.id, role="assistant", conversation_id=conversation_id,
+    )
+    db.add(assistant_row)
+    await db.commit()
+    await db.refresh(assistant_row)
+    return assistant_row
 
 
 @router.get("/{lesson_id}/questions", response_model=list[lesson_schema.QuestionOut])
@@ -337,8 +475,18 @@ async def delete_question(
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
 
-    # Delete the question
-    await db.delete(question)
+    # Delete the question + discendenti thread (un solo statement: niente problemi FK self)
+    to_delete = [question]
+    idx = 0
+    while idx < len(to_delete):
+        kids = await db.execute(
+            select(LessonQuestion).where(LessonQuestion.parent_id == to_delete[idx].id)
+        )
+        to_delete.extend(kids.scalars().all())
+        idx += 1
+    await db.execute(
+        delete(LessonQuestion).where(LessonQuestion.id.in_([r.id for r in to_delete]))
+    )
     await db.commit()
 
     return {"message": "Question deleted successfully"}

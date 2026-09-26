@@ -61,8 +61,11 @@ class LessonQuestion(Base):
     __tablename__ = "lesson_questions"
     id = Column(Integer, primary_key=True, index=True)
     lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False)
-    question = Column(Text, nullable=False)
-    answer = Column(Text, nullable=False)
+    question = Column(Text, nullable=False)  # contenuto messaggio (nuove righe: un messaggio per riga)
+    answer = Column(Text, nullable=True)  # legacy: risposta nella stessa riga; nuove righe: null
+    parent_id = Column(Integer, ForeignKey("lesson_questions.id"), nullable=True)  # thread
+    role = Column(String, nullable=True)  # 'user' | 'assistant' (nuove righe)
+    conversation_id = Column(String, nullable=True)  # chat lineare
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     lesson = relationship("Lesson", back_populates="questions")
@@ -114,7 +117,10 @@ class LabQuestion(Base):
     id = Column(Integer, primary_key=True, index=True)
     lab_id = Column(Integer, ForeignKey("labs.id"), nullable=False)
     question = Column(Text, nullable=False)
-    answer = Column(Text, nullable=False)
+    answer = Column(Text, nullable=True)
+    parent_id = Column(Integer, ForeignKey("lab_questions.id"), nullable=True)
+    role = Column(String, nullable=True)  # 'user' | 'assistant'
+    conversation_id = Column(String, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     lab = relationship("Lab", back_populates="questions")
