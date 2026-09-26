@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.models.base import Course, User, Lesson
 from app.schemas import course as course_schema
 from app.services.llm_service import LLMService
+from app.services import roadmap_service
 from app.services.pdf_service import PDFService
 
 router = APIRouter()
@@ -32,36 +33,49 @@ async def create_course(
 ) -> Any:
     """
     Generate a new course index for a given topic and save it.
+    Se roadmap_slug presente: indice da roadmap.sh, niente LLM.
     """
-    # 1. Generate Index via LLM
-    try:
-        language = course_in.language or "en"
-        use_web_research = course_in.use_web_research or False
-        index_json_str = await LLMService.generate_course_index(
-            course_in.topic,
-            course_in.custom_instructions,
-            language,
-            use_web_research=use_web_research,
-            user=current_user,
-        )
-        # Validate JSON
-        json.loads(index_json_str)
-    except Exception as e:
-        logger.error("=== COURSE GENERATION FAILED ===")
-        logger.error("Exception type: %s", type(e).__name__)
-        logger.error("Exception: %s", str(e))
-        logger.error("Traceback:\n%s", traceback.format_exc())
-        raise HTTPException(
-            status_code=500, detail=f"Failed to generate course index: {str(e)}"
-        )
+    language = course_in.language or "en"
+    if course_in.roadmap_slug:
+        try:
+            title, index_json_str = await roadmap_service.roadmap_to_index_json(
+                course_in.roadmap_slug
+            )
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"roadmap.sh failed: {str(e)}")
+        source, slug = "roadmap", course_in.roadmap_slug
+    else:
+        # 1. Generate Index via LLM
+        try:
+            use_web_research = course_in.use_web_research or False
+            index_json_str = await LLMService.generate_course_index(
+                course_in.topic,
+                course_in.custom_instructions,
+                language,
+                use_web_research=use_web_research,
+                user=current_user,
+            )
+            # Validate JSON
+            json.loads(index_json_str)
+        except Exception as e:
+            logger.error("=== COURSE GENERATION FAILED ===")
+            logger.error("Exception type: %s", type(e).__name__)
+            logger.error("Exception: %s", str(e))
+            logger.error("Traceback:\n%s", traceback.format_exc())
+            raise HTTPException(
+                status_code=500, detail=f"Failed to generate course index: {str(e)}"
+            )
+        title, source, slug = course_in.topic, "ai", None
 
     # 2. Save to DB
     course = Course(
         user_id=current_user.id,
-        title=course_in.topic,
-        description=f"Course on {course_in.topic}",
+        title=title,
+        description=f"Course on {title}",
         index_json=index_json_str,
         language=language,
+        source=source,
+        roadmap_slug=slug,
     )
     db.add(course)
     await db.commit()
@@ -73,24 +87,26 @@ async def create_course(
 async def read_courses(
     skip: int = 0,
     limit: int = 100,
+    source: str = "ai",
     current_user: User = Depends(deps.get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """
     Retrieve user's courses with lesson completion stats and pagination metadata.
+    Filtro source: 'ai' (default, Dashboard invariata) | 'roadmap'.
     """
     # Get total count
     count_result = await db.execute(
         select(func.count())
         .select_from(Course)
-        .where(Course.user_id == current_user.id)
+        .where(Course.user_id == current_user.id, Course.source == source)
     )
     total = count_result.scalar()
 
     # Get paginated courses
     result = await db.execute(
         select(Course)
-        .where(Course.user_id == current_user.id)
+        .where(Course.user_id == current_user.id, Course.source == source)
         .order_by(Course.position.asc().nulls_last(), Course.created_at.asc())
         .offset(skip)
         .limit(limit)

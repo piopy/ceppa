@@ -30,6 +30,8 @@ class Course(Base):
     index_json = Column(Text)  # Storing the JSON tree of the course index
     language = Column(String, default="en")  # "en" or "it"
     position = Column(Integer, nullable=True, default=0)  # For drag & drop ordering
+    source = Column(String, nullable=False, default="ai")  # 'ai' | 'roadmap'
+    roadmap_slug = Column(String, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
     user = relationship("User", back_populates="courses")

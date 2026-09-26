@@ -20,6 +20,7 @@ class CourseCreate(BaseModel):
     use_web_research: Optional[bool] = (
         False  # Enable Tavily web search for course index
     )
+    roadmap_slug: Optional[str] = None  # Se presente: indice da roadmap.sh, salta LLM
 
 
 class CourseUpdate(BaseModel):
@@ -32,6 +33,8 @@ class CourseOut(BaseModel):
     description: Optional[str]
     index_json: str  # We might want to parse this in the frontend or use a JSON field in Pydantic if we used a specific type
     created_at: datetime
+    source: str = "ai"
+    roadmap_slug: Optional[str] = None
     # We can return the parsed index if we want, but for now raw string or parsed:
     # index: List[ModuleIndexItem]
 
