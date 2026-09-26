@@ -1,7 +1,34 @@
 import os
+import re
 import subprocess
 import shutil
 from pathlib import Path
+
+
+# Blocchi script che pdflatex/xelatex senza font CJK non digeriscono.
+# Nelle lezioni IT/EN sono rumore del LLM: si rimuovono invece di far fallire il PDF.
+_STRIP_RANGES = [
+    (0x4E00, 0x9FFF),    # CJK Unified
+    (0x3400, 0x4DBF),    # CJK Ext A
+    (0x20000, 0x2EBEF),  # CJK Ext B-F
+    (0x3040, 0x309F),    # Hiragana
+    (0x30A0, 0x30FF),    # Katakana
+    (0xAC00, 0xD7AF),    # Hangul
+    (0x0600, 0x06FF),    # Arabic
+    (0x0590, 0x05FF),    # Hebrew
+    (0x0E00, 0x0E7F),    # Thai
+    (0x0900, 0x097F),    # Devanagari
+    (0x1F000, 0x1FAFF),  # Emoji/simboli estesi
+    (0x200B, 0x200F),    # Zero-width/format
+    (0xFEFF, 0xFEFF),    # BOM
+]
+_STRIP_RE = re.compile("|".join(f"[\\U{c1:08X}-\\U{c2:08X}]" for c1, c2 in _STRIP_RANGES))
+
+
+def _clean_markdown(content_md: str) -> str:
+    """Rimuove caratteri che fanno fallire LaTeX. Ritorna (pulito, n_rimossi)."""
+    cleaned, n = _STRIP_RE.subn("", content_md)
+    return cleaned, n
 
 
 class PDFService:
@@ -52,7 +79,10 @@ class PDFService:
         md_file = dir_path / f"{safe_lesson}.md"
         pdf_file = dir_path / f"{safe_lesson}.pdf"
 
-        # Save MD
+        # Save MD (pulito da caratteri che uccidono LaTeX, es. CJK spuri del LLM)
+        content_md, stripped = _clean_markdown(content_md)
+        if stripped:
+            print(f"PDF: rimossi {stripped} caratteri non-latin da '{lesson_title}'")
         with open(md_file, "w", encoding="utf-8") as f:
             f.write(content_md)
 
@@ -63,21 +93,25 @@ class PDFService:
 
             for engine in pdf_engines:
                 try:
+                    cmd = [
+                        "pandoc",
+                        str(md_file),
+                        "-o",
+                        str(pdf_file),
+                        f"--pdf-engine={engine}",
+                        "-V",
+                        "geometry:margin=1in",
+                        "--toc",
+                    ]
+                    # Niente mainfont custom: niente fontconfig nel container,
+                    # xelatex usa Latin Modern da texmf. Unicode oltre latin
+                    # gia' rimosso da _clean_markdown.
                     result = subprocess.run(
-                        [
-                            "pandoc",
-                            str(md_file),
-                            "-o",
-                            str(pdf_file),
-                            f"--pdf-engine={engine}",
-                            "-V",
-                            "geometry:margin=1in",
-                            "--toc",
-                        ],
+                        cmd,
                         check=True,
                         capture_output=True,
                         text=True,
-                        timeout=120,  # 2 minute timeout
+                        timeout=300,  # doc interi corsi sono grossi
                     )
                     # If successful, break out of loop
                     break
