@@ -41,7 +41,8 @@ def _get_client(user=None) -> AsyncOpenAI:
     headers = None
     if base_url and "opencode.ai/zen/go" in base_url:
         headers = {"x-opencode-session": _SESSION_ID, "user-agent": "ceppa/1.0"}
-    return AsyncOpenAI(api_key=api_key, base_url=base_url, default_headers=headers)
+    # Timeout esplicito: senza, un worker appeso blocca reload e polling per sempre
+    return AsyncOpenAI(api_key=api_key, base_url=base_url, default_headers=headers, timeout=180.0)
 
 
 # Sessione stabile per boot (prompt caching + routing zen/go)
@@ -60,7 +61,20 @@ async def _complete(user, messages: list, temperature: float = 0.7, max_tokens: 
         if max_tokens:
             kwargs["max_output_tokens"] = max_tokens
         response = await client.responses.create(**kwargs)
-        return response.output_text.strip()
+        text = (response.output_text or "").strip()
+        if not text:
+            # Tipico: thinking ha mangiato il budget -> status incomplete. Log senza segreti.
+            logger.error(
+                "responses vuota: model=%s status=%s incomplete=%s usage=%s",
+                model, getattr(response, "status", "?"),
+                getattr(getattr(response, "incomplete_details", None), "reason", None),
+                getattr(response, "usage", None),
+            )
+            raise RuntimeError(
+                f"LLM risposta vuota (status={getattr(response, 'status', '?')}). "
+                "Se incomplete: alza max_output_tokens o riduci prompt."
+            )
+        return text
     kwargs = {"model": model, "messages": messages, "temperature": temperature}
     if max_tokens:
         kwargs["max_tokens"] = max_tokens
@@ -151,7 +165,7 @@ class LLMService:
         """
 
         content = await _complete(
-            user, [{"role": "user", "content": prompt}], max_tokens=4000
+            user, [{"role": "user", "content": prompt}], max_tokens=8000
         )
 
         # Simple cleanup if the LLM wraps in code blocks despite instructions
