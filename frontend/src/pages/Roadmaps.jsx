@@ -70,10 +70,10 @@ export default function Roadmaps() {
   return (
     <div className="mx-auto max-w-6xl p-8">
       <header className="mb-8">
-        <h2 className="flex items-center gap-3 text-4xl font-extrabold text-gray-900 dark:text-gray-100">
+        <h2 className="flex items-center gap-3 text-4xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
           <Map className="h-8 w-8 text-primary" /> Roadmaps
         </h2>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-gray-500 dark:text-gray-400">
           Percorsi da <a href="https://roadmap.sh" target="_blank" rel="noreferrer" className="text-primary hover:underline">roadmap.sh</a>.
           Click su una roadmap per crearne un corso: le lezioni si generano come in Dashboard.
         </p>
@@ -130,10 +130,10 @@ export default function Roadmaps() {
                   <div
                     key={c.id}
                     onClick={() => navigate(`/course/${c.id}`)}
-                    className="cursor-pointer rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
+                    className="cursor-pointer rounded-2xl border border-gray-200 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-900/5 dark:border-gray-700 dark:bg-gray-800 dark:hover:shadow-black/30"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-bold dark:text-gray-100">{c.title}</h4>
+                      <h4 className="font-bold tracking-tight dark:text-gray-100">{c.title}</h4>
                       <button
                         onClick={(e) => handleDelete(e, c.id)}
                         title="Elimina"
@@ -158,8 +158,8 @@ export default function Roadmaps() {
             ) : (
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {filtered.map((r) => (
-                  <div key={r.slug} className="flex flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
-                    <h4 className="font-bold dark:text-gray-100">{r.title}</h4>
+                  <div key={r.slug} className="flex flex-col rounded-2xl border border-gray-200 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-900/5 dark:border-gray-700 dark:bg-gray-800 dark:hover:shadow-black/30">
+                    <h4 className="font-bold tracking-tight dark:text-gray-100">{r.title}</h4>
                     <p className="mt-1 flex-1 text-sm text-gray-600 line-clamp-3 dark:text-gray-400">{r.description}</p>
                     <div className="mt-4 flex gap-2">
                       <button

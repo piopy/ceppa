@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import AuthLayout, { authInput, authButton } from '../components/AuthLayout';
 
 export default function Register() {
   const [username, setUsername] = useState('');
@@ -17,55 +18,39 @@ export default function Register() {
     } catch (err) {
       const detail = err?.response?.data?.detail;
       const msg = Array.isArray(detail)
-        ? detail.map((d) => d.msg || JSON.stringify(d)).join('; ')
+        ? detail.map(d => d.msg || JSON.stringify(d)).join('; ')
         : detail;
       if (msg && msg.toLowerCase().includes('already exists')) {
-        setError('Username already taken. Please choose another.');
+        setError('Username già in uso. Scegline un altro.');
       } else if (msg) {
-        setError(`Registration failed: ${msg}`);
+        setError(`Registrazione non riuscita: ${msg}`);
       } else {
-        setError('Registration failed. Please try again later.');
+        setError('Registrazione non riuscita. Riprova più tardi.');
       }
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
-        <h2 className="text-3xl font-bold text-center mb-8 text-primary">Join Ceppa</h2>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
-            <input 
-              type="text" 
-              value={username} 
-              onChange={e => setUsername(e.target.value)}
-              className="mt-1 w-full px-4 py-2 border dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary focus:outline-none"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-              <input 
-                type="password" 
-                value={password} 
-                onChange={e => setPassword(e.target.value)}
-                className="mt-1 w-full px-4 py-2 border dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary focus:outline-none"
-                required
-                minLength={8}
-                title="Minimo 8 caratteri"
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Minimo 8 caratteri.</p>
-          </div>
-          <button type="submit" className="w-full py-2 bg-primary text-white rounded-lg hover:bg-indigo-700 transition">
-            Create Account
-          </button>
-        </form>
-        <p className="mt-4 text-center text-sm dark:text-gray-400">
-          Already have an account? <Link to="/login" className="text-primary hover:underline">Login</Link>
-        </p>
-      </div>
-    </div>
+    <AuthLayout
+      title="Crea il tuo account"
+      subtitle="Gratis, senza carta. I tuoi corsi restano tuoi."
+      error={error}
+      footer={<>Hai già un account? <Link to="/login" className="font-semibold text-primary hover:underline">Accedi</Link></>}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="reg-user" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+          <input id="reg-user" type="text" value={username} onChange={e => setUsername(e.target.value)}
+            autoComplete="username" required className={authInput} />
+        </div>
+        <div>
+          <label htmlFor="reg-pass" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+          <input id="reg-pass" type="password" value={password} onChange={e => setPassword(e.target.value)}
+            autoComplete="new-password" required minLength={8} title="Minimo 8 caratteri" className={authInput} />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Minimo 8 caratteri.</p>
+        </div>
+        <button type="submit" className={authButton}>Crea account</button>
+      </form>
+    </AuthLayout>
   );
 }

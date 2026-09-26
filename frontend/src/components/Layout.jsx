@@ -66,23 +66,23 @@ export default function Layout() {
       <aside className={`bg-secondary dark:bg-gray-800 text-white flex flex-col shadow-xl transition-all duration-300 ${
         showSidebar ? 'w-64' : 'w-0'
       } overflow-hidden`}>
-        <div className="p-6">
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Book className="w-8 h-8 text-primary" />
+        <div className="p-5 pb-2">
+          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            <Book className="w-6 h-6 text-primary" />
             Ceppa.ai
           </h1>
         </div>
         
-        <nav className="flex-1 px-4 space-y-2 mt-4">
-          <NavLink to="/" end className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition ${isActive ? 'bg-white/15 font-semibold' : 'hover:bg-white/10 dark:hover:bg-white/5'}`}>
+        <nav aria-label="Principale" className="flex-1 px-3 space-y-1 mt-3 text-[15px]">
+          <NavLink to="/" end className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition ${isActive ? 'bg-white/15 text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>
             <Home className="w-5 h-5" />
             Dashboard
           </NavLink>
-          <NavLink to="/labs" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition ${isActive ? 'bg-white/15 font-semibold' : 'hover:bg-white/10 dark:hover:bg-white/5'}`}>
+          <NavLink to="/labs" className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition ${isActive ? 'bg-white/15 text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>
             <FlaskConical className="w-5 h-5 text-orange-400" />
             Hands-on Labs
           </NavLink>
-          <NavLink to="/roadmaps" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition ${isActive ? 'bg-white/15 font-semibold' : 'hover:bg-white/10 dark:hover:bg-white/5'}`}>
+          <NavLink to="/roadmaps" className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition ${isActive ? 'bg-white/15 text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'}`}>
             <Map className="w-5 h-5 text-emerald-400" />
             Roadmaps
           </NavLink>

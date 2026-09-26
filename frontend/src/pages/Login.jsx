@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import AuthLayout, { authInput, authButton } from '../components/AuthLayout';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -11,48 +12,35 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     try {
       await login(username, password);
       navigate('/');
     } catch (err) {
-      setError('Login failed. Check credentials.');
+      setError('Accesso non riuscito. Controlla le credenziali.');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
-        <h2 className="text-3xl font-bold text-center mb-8 text-primary">Ceppa.ai</h2>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
-            <input 
-              type="text" 
-              value={username} 
-              onChange={e => setUsername(e.target.value)}
-              className="mt-1 w-full px-4 py-2 border dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary focus:outline-none"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-            <input 
-              type="password" 
-              value={password} 
-              onChange={e => setPassword(e.target.value)}
-              className="mt-1 w-full px-4 py-2 border dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary focus:outline-none"
-              required
-            />
-          </div>
-          <button type="submit" className="w-full py-2 bg-primary text-white rounded-lg hover:bg-indigo-700 transition">
-            Sign In
-          </button>
-        </form>
-        <p className="mt-4 text-center text-sm dark:text-gray-400">
-          Don't have an account? <Link to="/register" className="text-primary hover:underline">Register</Link>
-        </p>
-      </div>
-    </div>
+    <AuthLayout
+      title="Bentornato"
+      subtitle="Riprendi da dove avevi lasciato."
+      error={error}
+      footer={<>Non hai un account? <Link to="/register" className="font-semibold text-primary hover:underline">Registrati</Link></>}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="login-user" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+          <input id="login-user" type="text" value={username} onChange={e => setUsername(e.target.value)}
+            autoComplete="username" required className={authInput} />
+        </div>
+        <div>
+          <label htmlFor="login-pass" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+          <input id="login-pass" type="password" value={password} onChange={e => setPassword(e.target.value)}
+            autoComplete="current-password" required className={authInput} />
+        </div>
+        <button type="submit" className={authButton}>Accedi</button>
+      </form>
+    </AuthLayout>
   );
 }

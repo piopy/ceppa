@@ -111,10 +111,10 @@ export default function HandsOnLabs() {
       <header className="mb-12">
         <div className="flex items-center gap-3 mb-2">
           <FlaskConical className="w-8 h-8 text-orange-500" />
-          <h2 className="text-4xl font-extrabold text-gray-900 dark:text-gray-100">Hands-on Labs</h2>
+          <h2 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">Hands-on Labs</h2>
         </div>
-        <p className="text-gray-600 dark:text-gray-400 ml-11">
-          Create interactive lab courses — 30% theory, 70% hands-on practice.
+        <p className="text-gray-500 dark:text-gray-400 ml-11">
+          Progetti reali, guida che cala col tempo. 30% teoria, 70% pratica.
         </p>
       </header>
 
@@ -261,13 +261,13 @@ export default function HandsOnLabs() {
                 >
                   <div 
                     onClick={() => handleNavigate(course.id)}
-                    className={`block p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-orange-500/5 transition border-2 cursor-pointer ${
+                    className={`block p-6 bg-white dark:bg-gray-800 rounded-2xl transition border cursor-pointer hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-900/5 dark:hover:shadow-black/30 ${
                       course.all_labs_completed 
-                        ? 'border-green-500 shadow-green-100' 
-                        : 'border-gray-100 dark:border-gray-700'
+                        ? 'border-green-500/60' 
+                        : 'border-gray-200 dark:border-gray-700'
                     }`}
                   >
-                    <h4 className="text-2xl font-bold mb-4 group-hover:text-orange-500 transition pr-8 dark:text-gray-100">{course.title}</h4>
+                    <h4 className="text-xl font-bold leading-snug tracking-tight mb-4 group-hover:text-orange-500 transition pr-8 dark:text-gray-100">{course.title}</h4>
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
                       <Clock className="w-4 h-4" />
                       <span>Created {new Date(course.created_at).toLocaleDateString()}</span>
