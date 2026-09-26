@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import client from '../api/client';
+import { toast } from 'sonner';
+import { CardSkeleton, Empty, confirmDialog, promptDialog } from '../components/ui';
 import { Plus, BookOpen, Clock, Loader2, Languages, Trash2, Pencil, CheckCircle2, GripVertical, Globe, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -182,7 +184,7 @@ export default function Dashboard() {
         fetchTavilyCredits();
       }
     } catch (err) {
-      alert('Generation failed. Check your API key/Backend.');
+      toast.error('Generation failed. Check your API key/Backend.');
     } finally {
       setCreating(false);
     }
@@ -191,15 +193,16 @@ export default function Dashboard() {
   const handleDeleteCourse = async (e, courseId) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
+    if (!await confirmDialog({ title: 'Eliminare corso?', message: 'Corso e lezioni verranno eliminati. Non si può annullare.', confirmLabel: 'Elimina', danger: true })) {
       return;
     }
     setDeleting(courseId);
     try {
       await client.delete(`/courses/${courseId}`);
       setCourses(courses.filter(c => c.id !== courseId));
+      toast.success('Corso eliminato.');
     } catch (err) {
-      alert('Failed to delete course.');
+      toast.error('Failed to delete course.');
     } finally {
       setDeleting(null);
     }
@@ -209,7 +212,7 @@ export default function Dashboard() {
     e.preventDefault();
     e.stopPropagation();
     const currentCourse = courses.find(c => c.id === courseId);
-    const name = prompt('Enter new course name:', currentCourse?.title);
+    const name = await promptDialog({ title: 'Rinomina corso', initial: currentCourse?.title ?? '', placeholder: 'Nome corso' });
     if (!name || name === currentCourse?.title) return;
     
     setRenaming(courseId);
@@ -217,7 +220,7 @@ export default function Dashboard() {
       const res = await client.put(`/courses/${courseId}`, { title: name });
       setCourses(courses.map(c => c.id === courseId ? { ...c, title: res.data.title } : c));
     } catch (err) {
-      alert('Failed to rename course.');
+      toast.error('Failed to rename course.');
     } finally {
       setRenaming(null);
     }
@@ -237,9 +240,7 @@ export default function Dashboard() {
 
   const handleDragEnd = async (event) => {
     const { active, over } = event;
-    
-    console.log('Drag ended:', { activeId: active?.id, overId: over?.id });
-    
+
     setActiveDragId(null);
     
     // Prevent any default behavior that might cause page refresh
@@ -250,12 +251,10 @@ export default function Dashboard() {
     
     // CRITICAL: Exit early for any non-move scenario
     if (!active || !over) {
-      console.log('No active or over element, aborting');
       return;
     }
     
     if (active.id === over.id) {
-      console.log('Same position, no reorder needed');
       return;
     }
     
@@ -263,12 +262,10 @@ export default function Dashboard() {
     const newIndex = courses.findIndex(c => c.id === over.id);
     
     if (oldIndex === -1 || newIndex === -1) {
-      console.log('Invalid indices, aborting');
       return;
     }
     
     if (oldIndex === newIndex) {
-      console.log('Same index, no reorder needed');
       return;
     }
     
@@ -280,14 +277,11 @@ export default function Dashboard() {
     
     // Save order to backend - send just array of IDs
     try {
-      console.log('Sending reorder:', newOrder.map(c => c.id));
-      const response = await client.put('/courses/reorder', { 
+      await client.put('/courses/reorder', { 
         course_order: newOrder.map(c => c.id) 
       });
-      console.log('Reorder response:', response.data);
     } catch (err) {
-      console.error('Failed to save order:', err);
-      alert('Failed to save new order. Reverting...');
+      toast.error('Failed to save new order. Reverting...');
       // Rollback on error
       setCourses(oldOrder);
     }
@@ -430,11 +424,15 @@ export default function Dashboard() {
         </h3>
         
         {loading ? (
-          <div className="flex justify-center p-12"><Loader2 className="animate-spin w-12 h-12 text-gray-300" /></div>
-        ) : courses.length === 0 ? (
-          <div className="text-center p-12 bg-gray-100 dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400">
-            You haven't started any courses yet. Type a topic above to begin.
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
           </div>
+        ) : courses.length === 0 ? (
+          <Empty
+            icon={<BookOpen className="h-10 w-10" />}
+            title="Nessun corso ancora"
+            hint="Scrivi un argomento sopra e premi Learn now."
+          />
         ) : (
           <>
             <DndContext 

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import client from '../api/client';
+import { toast } from 'sonner';
+import { CardSkeleton, Empty, confirmDialog } from '../components/ui';
 import { Plus, FlaskConical, Clock, Loader2, Trash2, CheckCircle2, Play, ChevronDown, ChevronUp, Globe, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -74,7 +76,7 @@ export default function HandsOnLabs() {
       // Navigate to the newly created lab course
       navigate(`/labs/${res.data.id}`);
     } catch (err) {
-      alert('Failed to create hands-on course: ' + (err.response?.data?.detail || err.message));
+      toast.error('Failed to create hands-on course: ' + (err.response?.data?.detail || err.message));
     } finally {
       setCreating(false);
     }
@@ -83,13 +85,14 @@ export default function HandsOnLabs() {
   const handleDeleteCourse = async (e, courseId) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm('Delete this hands-on course and all its labs? This cannot be undone.')) return;
+    if (!await confirmDialog({ title: 'Eliminare lab course?', message: 'Corso e lab verranno eliminati. Non si può annullare.', confirmLabel: 'Elimina', danger: true })) return;
     setDeleting(courseId);
     try {
       await client.delete(`/hands-on/${courseId}`);
       setCourses(courses.filter(c => c.id !== courseId));
+      toast.success('Lab course eliminato.');
     } catch (err) {
-      alert('Failed to delete course.');
+      toast.error('Failed to delete course.');
     } finally {
       setDeleting(null);
     }
@@ -220,12 +223,15 @@ export default function HandsOnLabs() {
         </h3>
         
         {loading ? (
-          <div className="flex justify-center p-12"><Loader2 className="animate-spin w-12 h-12 text-gray-300" /></div>
-        ) : courses.length === 0 ? (
-          <div className="text-center p-12 bg-gray-100 dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400">
-            <FlaskConical className="w-16 h-16 mx-auto mb-4 opacity-30" />
-            You haven't created any lab courses yet. Type a topic above to get started.
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
           </div>
+        ) : courses.length === 0 ? (
+          <Empty
+            icon={<FlaskConical className="h-10 w-10" />}
+            title="Nessun lab ancora"
+            hint="Scrivi un argomento sopra per creare il primo."
+          />
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

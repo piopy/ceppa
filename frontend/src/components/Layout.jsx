@@ -1,4 +1,4 @@
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, Book, PlusCircle, Home, Github, ChevronLeft, ChevronRight, Moon, Sun, Settings, FlaskConical } from 'lucide-react';
 import versionData from '../version.json';
@@ -9,9 +9,10 @@ export default function Layout() {
   const navigate = useNavigate();
   const [showSidebar, setShowSidebar] = useState(true);
   const [darkMode, setDarkMode] = useState(() => {
-    // Initialize from localStorage or default to false
+    // localStorage vince; altrimenti prefers-color-scheme
     const saved = localStorage.getItem('darkMode');
-    return saved === 'true';
+    if (saved !== null) return saved === 'true';
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
   });
 
   // Apply dark mode class to document on mount and when it changes
@@ -73,14 +74,14 @@ export default function Layout() {
         </div>
         
         <nav className="flex-1 px-4 space-y-2 mt-4">
-          <Link to="/" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 dark:hover:bg-white/5 transition">
+          <NavLink to="/" end className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition ${isActive ? 'bg-white/15 font-semibold' : 'hover:bg-white/10 dark:hover:bg-white/5'}`}>
             <Home className="w-5 h-5" />
             Dashboard
-          </Link>
-          <Link to="/labs" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 dark:hover:bg-white/5 transition">
+          </NavLink>
+          <NavLink to="/labs" className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition ${isActive ? 'bg-white/15 font-semibold' : 'hover:bg-white/10 dark:hover:bg-white/5'}`}>
             <FlaskConical className="w-5 h-5 text-orange-400" />
             Hands-on Labs
-          </Link>
+          </NavLink>
         </nav>
 
         <div className="px-4 py-3">

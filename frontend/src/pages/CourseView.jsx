@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import client from '../api/client';
+import { toast } from 'sonner';
+import { confirmDialog } from '../components/ui';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ChevronRight, ChevronDown, CheckCircle2, Download, RefreshCcw, Loader2, Send, BookOpen, FileText, Zap, MessageCircle, Maximize2, ChevronLeft, DownloadCloud, Trash2, Globe, Save, Star } from 'lucide-react';
@@ -116,7 +118,7 @@ export default function CourseView() {
         pollForPdf(res.data.id);
       }
     } catch (err) {
-      alert('Failed to load lesson content.');
+      toast.error('Failed to load lesson content.');
     } finally {
       setLessonLoading(false);
     }
@@ -164,21 +166,21 @@ export default function CourseView() {
       setQuestions([res.data, ...questions]);
       setNewQuestion('');
     } catch (err) {
-      alert('Failed to ask question. Please try again.');
+      toast.error('Failed to ask question. Please try again.');
     } finally {
       setAskingQuestion(false);
     }
   };
 
   const handleDeleteQuestion = async (questionId) => {
-    if (!window.confirm('Sei sicuro di voler eliminare questa domanda?')) return;
+    if (!await confirmDialog({ title: 'Eliminare domanda?', confirmLabel: 'Elimina', danger: true })) return;
     
     setDeletingQuestion(questionId);
     try {
       await client.delete(`/lessons/${currentLesson.id}/questions/${questionId}`);
       setQuestions(questions.filter(q => q.id !== questionId));
     } catch (err) {
-      alert('Failed to delete question. Please try again.');
+      toast.error('Failed to delete question. Please try again.');
     } finally {
       setDeletingQuestion(null);
     }
@@ -195,7 +197,7 @@ export default function CourseView() {
       setCurrentLesson(prev => ({ ...prev, user_notes: notes }));
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
-      alert('Failed to save notes.');
+      toast.error('Failed to save notes.');
     } finally {
       setSavingNotes(false);
     }
@@ -216,13 +218,13 @@ export default function CourseView() {
       }));
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
-      alert('Failed to update progress.');
+      toast.error('Failed to update progress.');
     }
   };
 
   const handleRegenerate = async () => {
     if (!regenerateFeedback.trim()) {
-      alert('Please provide feedback on what to improve.');
+      toast.warning('Please provide feedback on what to improve.');
       return;
     }
     setRegenerating(true);
@@ -240,7 +242,7 @@ export default function CourseView() {
         pollForPdf(res.data.id);
       }
     } catch (err) {
-      alert('Failed to regenerate lesson.');
+      toast.error('Failed to regenerate lesson.');
     } finally {
       setRegenerating(false);
     }
@@ -304,7 +306,7 @@ export default function CourseView() {
   };
 
   const handleGenerateAll = async () => {
-    if (!window.confirm('Vuoi generare tutte le lezioni mancanti? Questa operazione potrebbe richiedere alcuni minuti.')) {
+    if (!await confirmDialog({ title: 'Generare tutte le lezioni?', message: 'Operazione lunga, alcuni minuti.', confirmLabel: 'Genera' })) {
       return;
     }
     
@@ -317,7 +319,7 @@ export default function CourseView() {
       });
       
       if (res.data.to_generate === 0) {
-        alert('Tutte le lezioni sono già state generate!');
+        toast.info('Tutte le lezioni sono già state generate!');
         setGeneratingAll(false);
         setGenerationStatus(null);
         return;
@@ -327,7 +329,7 @@ export default function CourseView() {
       pollGenerationStatus();
     } catch (err) {
       console.error('Failed to start generation:', err);
-      alert('Errore nell\'avvio della generazione');
+      toast.error('Errore nell\'avvio della generazione');
       setGeneratingAll(false);
       setGenerationStatus(null);
     }
@@ -347,7 +349,7 @@ export default function CourseView() {
           setGeneratingAll(false);
           
           if (res.data.failed > 0) {
-            alert(`Generazione completata con ${res.data.failed} errori. Controlla la console per i dettagli.`);
+            toast.warning(`Generazione completata con ${res.data.failed} errori.`);
             console.error('Generation errors:', res.data.errors);
           } else {
             setSuccessMsg('Tutte le lezioni sono state generate con successo!');
@@ -422,10 +424,9 @@ export default function CourseView() {
             </div>
             
             <div 
-              className={`prose prose-indigo text-justify transition-all duration-300 ${
-                isImmersiveMode ? 'prose-lg' : ''
+              className={`prose dark:prose-invert text-left transition-all duration-300 ${
+                isImmersiveMode ? 'prose-lg max-w-[68ch] mx-auto w-full' : ''
               }`}
-              style={isImmersiveMode ? { maxWidth: 'none' } : {}}
             >
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{currentLesson.content_markdown}</ReactMarkdown>
             </div>
@@ -479,7 +480,7 @@ export default function CourseView() {
                             window.open(url, '_blank');
                             setTimeout(() => window.URL.revokeObjectURL(url), 60000);
                           } catch (err) {
-                            alert('Failed to load PDF. Please try again.');
+                            toast.error('Failed to load PDF. Please try again.');
                           } finally {
                             setViewingPdf(false);
                           }
@@ -506,7 +507,7 @@ export default function CourseView() {
                             link.parentNode.removeChild(link);
                             window.URL.revokeObjectURL(url);
                           } catch (err) {
-                            alert('Failed to download PDF. Please try again.');
+                            toast.error('Failed to download PDF. Please try again.');
                           } finally {
                             setDownloadingSinglePdf(false);
                           }
@@ -608,7 +609,7 @@ export default function CourseView() {
                         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
                           <span className="text-green-600 font-bold text-sm">A</span>
                         </div>
-                        <div className="flex-1 prose prose-sm max-w-none">
+                        <div className="flex-1 prose prose-sm dark:prose-invert max-w-none">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{qa.answer}</ReactMarkdown>
                         </div>
                       </div>
@@ -832,7 +833,7 @@ export default function CourseView() {
                 window.URL.revokeObjectURL(url);
               } catch (err) {
                 console.error('Download failed:', err);
-                alert('Failed to download full course PDF. Make sure all lessons are generated.');
+                toast.error('Failed to download full course PDF. Make sure all lessons are generated.');
               } finally {
                 setDownloadingPdf(false);
               }
@@ -880,7 +881,7 @@ export default function CourseView() {
                 window.URL.revokeObjectURL(url);
               } catch (err) {
                 console.error('Download failed:', err);
-                alert('Failed to download full course EPUB. Make sure all lessons are generated.');
+                toast.error('Failed to download full course EPUB. Make sure all lessons are generated.');
               } finally {
                 setDownloadingEpub(false);
               }
