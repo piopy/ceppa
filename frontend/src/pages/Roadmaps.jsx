@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import { toast } from 'sonner';
 import { CardSkeleton, Empty, confirmDialog } from '../components/ui';
-import { Map, Search, Plus, Trash2, BookOpen, ExternalLink } from 'lucide-react';
+import { Map, Search, Plus, Trash2, BookOpen, ExternalLink, Languages } from 'lucide-react';
 
 export default function Roadmaps() {
   const navigate = useNavigate();
@@ -11,6 +11,8 @@ export default function Roadmaps() {
   const [mine, setMine] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [language, setLanguage] = useState('it');
+  const [customLanguage, setCustomLanguage] = useState('');
   const [creating, setCreating] = useState(null);
 
   useEffect(() => { fetchAll(); }, []);
@@ -32,9 +34,14 @@ export default function Roadmaps() {
   };
 
   const handleCreate = async (rm) => {
+    const selectedLanguage = language === 'custom' ? customLanguage : language;
+    if (language === 'custom' && !customLanguage) {
+      toast.warning('Indica la lingua custom.');
+      return;
+    }
     setCreating(rm.slug);
     try {
-      const res = await client.post('/courses/', { topic: rm.title, roadmap_slug: rm.slug, language: 'en' });
+      const res = await client.post('/courses/', { topic: rm.title, roadmap_slug: rm.slug, language: selectedLanguage });
       toast.success(`Percorso "${rm.title}" creato.`);
       navigate(`/course/${res.data.id}`);
     } catch (err) {
@@ -70,14 +77,38 @@ export default function Roadmaps() {
           Percorsi da <a href="https://roadmap.sh" target="_blank" rel="noreferrer" className="text-primary hover:underline">roadmap.sh</a>.
           Click su una roadmap per crearne un corso: le lezioni si generano come in Dashboard.
         </p>
-        <div className="relative mt-4 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cerca roadmap..."
-            className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 dark:border-gray-600 dark:bg-gray-700"
-          />
+        <div className="mt-4 flex max-w-2xl flex-wrap items-center gap-3">
+          <div className="relative max-w-md flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cerca roadmap..."
+              className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 dark:border-gray-600 dark:bg-gray-700"
+            />
+          </div>
+          <div className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700">
+            <Languages className="h-4 w-4 text-gray-500" />
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="bg-transparent text-sm font-medium outline-none dark:text-gray-200"
+              title="Lingua lezioni generate"
+            >
+              <option value="it">🇮🇹 Italiano</option>
+              <option value="en">🇬🇧 English</option>
+              <option value="custom">✏️ Custom</option>
+            </select>
+          </div>
+          {language === 'custom' && (
+            <input
+              type="text"
+              placeholder="es, fr, de..."
+              value={customLanguage}
+              onChange={(e) => setCustomLanguage(e.target.value)}
+              className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700"
+            />
+          )}
         </div>
       </header>
 
