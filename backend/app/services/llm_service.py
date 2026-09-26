@@ -125,27 +125,29 @@ class LLMService:
                 )
 
         prompt = f"""
-        Act as an expert curriculum designer. Create a comprehensive and detailed course syllabus for the topic: "{topic}".
+        Act as an expert curriculum designer. create a comprehensive and detailed course syllabus for the topic: "{topic}".
         {lang_instruction}
-
+        
         {web_context}
-
+        
         {f"Additional User Instructions: {instructions}" if instructions else ""}
 
-        STRUCTURE (no example provided on purpose: tailor the breakdown to THIS topic, not to a template):
-        - At least 5 modules, at least 4 lessons each (20+ lessons total for a normal topic; more if the topic is vast).
-        - Progression: fundamentals first, then practice, then advanced topics. Each module harder than the previous.
-        - Every module MUST contain: core concepts, at least one hands-on/applied lesson, common mistakes or pitfalls.
-        - The last module MUST be a capstone: a real end-to-end project or synthesis, not a summary.
-        - Banned filler lessons: generic "Introduction", "Conclusion", "Overview", "Summary" as standalone lessons
-          (fold intro material into the first real lesson, synthesis into the capstone).
-        - Lesson titles specific and non-overlapping: a reader must tell lessons apart by title alone.
-        - Paths are hierarchical numbers: module N uses "N.1", "N.2", ...
-
-        The output MUST be a valid JSON array. Shape only (keys and types):
-        [{{"title": str, "lessons": [{{"title": str, "path": str}}]}}]
-
+        The output MUST be a valid JSON array of Modules. Each Module has a "title" and a list of "lessons".
+        Each Lesson has a "title" and a "path". The path should be a hierarchical number string (e.g. "1.1", "1.2").
+        
+        Example JSON format:
+        [
+            {{
+                "title": "Module 1: Introduction",
+                "lessons": [
+                    {{"title": "What is {topic}?", "path": "1.1"}},
+                    {{"title": "Setup and Installation", "path": "1.2"}}
+                ]
+            }}
+        ]
+        
         Provide ONLY the JSON output. Do not include markdown formatting (like ```json), just the raw JSON.
+        Make the course deep and comprehensive.
         """
 
         content = await _complete(
