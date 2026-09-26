@@ -22,7 +22,7 @@ async def get_current_user(
     )
     try:
         payload = jwt.decode(
-            token, security._secret[:32], algorithms=[security.ALGORITHM]
+            token, security.get_jwt_secret(), algorithms=[security.ALGORITHM]
         )
         username: str = payload.get("sub")
         if username is None:

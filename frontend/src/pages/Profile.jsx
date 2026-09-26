@@ -16,6 +16,7 @@ export default function Profile() {
     custom_llm_model: '',
     custom_tavily_api_key: '',
   });
+  const [keysSet, setKeysSet] = useState({ openai: false, tavily: false });
 
   // Visibility toggles for sensitive fields
   const [showApiKey, setShowApiKey] = useState(false);
@@ -35,10 +36,14 @@ export default function Profile() {
     try {
       const res = await client.get('/users/me');
       setSettings({
-        custom_openai_api_key: res.data.custom_openai_api_key || '',
+        custom_openai_api_key: '',
         custom_openai_base_url: res.data.custom_openai_base_url || '',
         custom_llm_model: res.data.custom_llm_model || '',
-        custom_tavily_api_key: res.data.custom_tavily_api_key || '',
+        custom_tavily_api_key: '',
+      });
+      setKeysSet({
+        openai: !!res.data.custom_openai_api_key_set,
+        tavily: !!res.data.custom_tavily_api_key_set,
       });
     } catch (err) {
       console.error('Failed to fetch settings:', err);
@@ -53,12 +58,16 @@ export default function Profile() {
     setSuccessMsg('');
     setErrorMsg('');
     try {
-      // Send null for empty strings so backend clears the value
-      const payload = {};
-      for (const [key, value] of Object.entries(settings)) {
-        payload[key] = value.trim() || null;
-      }
+      // Blank = keep esistente, null = clear esplicito via pulsante? Qui: blank keep, solo non-blank inviato.
+      // Per base_url/model (non segreti): stringa vuota = clear come prima.
+      const payload = {
+        custom_openai_base_url: settings.custom_openai_base_url.trim() || null,
+        custom_llm_model: settings.custom_llm_model.trim() || null,
+      };
+      if (settings.custom_openai_api_key.trim()) payload.custom_openai_api_key = settings.custom_openai_api_key.trim();
+      if (settings.custom_tavily_api_key.trim()) payload.custom_tavily_api_key = settings.custom_tavily_api_key.trim();
       await client.put('/users/me/settings', payload);
+      setSettings((p) => ({ ...p, custom_openai_api_key: '', custom_tavily_api_key: '' }));
       setSuccessMsg('Settings saved successfully!');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
@@ -122,7 +131,7 @@ export default function Profile() {
                 type={showApiKey ? 'text' : 'password'}
                 value={settings.custom_openai_api_key}
                 onChange={(e) => handleChange('custom_openai_api_key', e.target.value)}
-                placeholder="sk-... or your Gemini API key"
+                placeholder={keysSet.openai ? '•••••• (configurata — blank per tenere)' : 'sk-... or your Gemini API key'}
                 className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-primary transition"
               />
               <button
@@ -190,7 +199,7 @@ export default function Profile() {
               type={showTavilyKey ? 'text' : 'password'}
               value={settings.custom_tavily_api_key}
               onChange={(e) => handleChange('custom_tavily_api_key', e.target.value)}
-              placeholder="tvly-..."
+              placeholder={keysSet.tavily ? '•••••• (configurata — blank per tenere)' : 'tvly-...'}
               className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-primary transition"
             />
             <button

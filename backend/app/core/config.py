@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str
 
+    # Security (P0: mai derivare da DATABASE_URL)
+    SECRET_KEY: str
+
     # LLM
     OPENAI_API_KEY: str
     OPENAI_BASE_URL: str

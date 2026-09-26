@@ -10,13 +10,14 @@ services:
     env_file:
       - envs/${ENV_MODE}.env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       ceppa_network:
         aliases:
           - backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: bash -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
   frontend:
     build: ./frontend
@@ -45,6 +46,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       ceppa_network:
         aliases:

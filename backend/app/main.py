@@ -14,16 +14,17 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In dev, allow all. Could be refined to localhost:5173
+    # Dev locale: localhost + hostname/LAN (es. http://pop-os:6760, http://192.168.x.x:6760).
+    # ponytail: regex ampia ok qui — JWT sta in localStorage, non nei cookie: nessun credential da rubare via CORS.
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|\[::1\]|[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)*|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2[0-9]|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# Create user_files dir if not exists
+# Create user_files dir if not exists (PDF serviti solo via endpoint autenticati)
 os.makedirs("/app/user_files", exist_ok=True)
-app.mount("/media", StaticFiles(directory="/app/user_files"), name="media")
 
 from app.api.api_v1.api import api_router
 

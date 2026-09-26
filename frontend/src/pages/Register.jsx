@@ -16,10 +16,13 @@ export default function Register() {
       navigate('/');
     } catch (err) {
       const detail = err?.response?.data?.detail;
-      if (detail && detail.toLowerCase().includes('already exists')) {
+      const msg = Array.isArray(detail)
+        ? detail.map((d) => d.msg || JSON.stringify(d)).join('; ')
+        : detail;
+      if (msg && msg.toLowerCase().includes('already exists')) {
         setError('Username already taken. Please choose another.');
-      } else if (detail) {
-        setError(`Registration failed: ${detail}`);
+      } else if (msg) {
+        setError(`Registration failed: ${msg}`);
       } else {
         setError('Registration failed. Please try again later.');
       }
@@ -44,13 +47,16 @@ export default function Register() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-            <input 
-              type="password" 
-              value={password} 
-              onChange={e => setPassword(e.target.value)}
-              className="mt-1 w-full px-4 py-2 border dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary focus:outline-none"
-              required
-            />
+              <input 
+                type="password" 
+                value={password} 
+                onChange={e => setPassword(e.target.value)}
+                className="mt-1 w-full px-4 py-2 border dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-primary focus:outline-none"
+                required
+                minLength={8}
+                title="Minimo 8 caratteri"
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Minimo 8 caratteri.</p>
           </div>
           <button type="submit" className="w-full py-2 bg-primary text-white rounded-lg hover:bg-indigo-700 transition">
             Create Account

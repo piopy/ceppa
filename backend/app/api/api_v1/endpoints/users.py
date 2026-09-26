@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
 from app.core.db import get_db
-from app.core.security import encrypt_value, decrypt_value
+from app.core.security import encrypt_value
 from app.models.base import User
 from app.schemas import user as user_schema
 
@@ -12,23 +12,16 @@ router = APIRouter()
 
 
 def _user_to_out(user: User) -> dict:
-    """Convert user model to output dict, decrypting API keys for display (masked)."""
+    """Mai plaintext: solo flag set/non-set. Chiavi via PUT, blank=keep, null=clear."""
     return {
         "id": user.id,
         "username": user.username,
-        # Decrypt keys for the frontend - they'll be shown masked in password fields
-        "custom_openai_api_key": (
-            decrypt_value(user.custom_openai_api_key)
-            if user.custom_openai_api_key
-            else None
-        ),
+        "custom_openai_api_key": None,
         "custom_openai_base_url": user.custom_openai_base_url,
         "custom_llm_model": user.custom_llm_model,
-        "custom_tavily_api_key": (
-            decrypt_value(user.custom_tavily_api_key)
-            if user.custom_tavily_api_key
-            else None
-        ),
+        "custom_tavily_api_key": None,
+        "custom_openai_api_key_set": bool(user.custom_openai_api_key),
+        "custom_tavily_api_key_set": bool(user.custom_tavily_api_key),
     }
 
 
