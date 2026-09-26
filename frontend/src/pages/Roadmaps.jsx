@@ -27,7 +27,7 @@ export default function Roadmaps() {
       setCatalog(cat.data);
       setMine(my.data.items);
     } catch (err) {
-      toast.error('Failed to load roadmaps.');
+      toast.error('Roadmap non caricate.');
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ export default function Roadmaps() {
       setMine(mine.filter((c) => c.id !== id));
       toast.success('Percorso eliminato.');
     } catch {
-      toast.error('Failed to delete.');
+      toast.error('Eliminazione non riuscita.');
     }
   };
 
@@ -75,7 +75,7 @@ export default function Roadmaps() {
         </h2>
         <p className="mt-2 text-gray-500 dark:text-gray-400">
           Percorsi da <a href="https://roadmap.sh" target="_blank" rel="noreferrer" className="text-primary hover:underline">roadmap.sh</a>.
-          Click su una roadmap per crearne un corso: le lezioni si generano come in Dashboard.
+          Fai click su una roadmap per crearne un corso: le lezioni si generano come in Dashboard.
         </p>
         <div className="mt-4 flex max-w-2xl flex-wrap items-center gap-3">
           <div className="relative max-w-md flex-1">
@@ -184,6 +184,10 @@ export default function Roadmaps() {
               </div>
             )}
           </section>
+          <footer className="mt-4 border-t border-gray-200 pt-4 text-xs text-gray-400 dark:border-gray-700">
+            Contenuti roadmap e link forniti da <a href="https://roadmap.sh" target="_blank" rel="noreferrer" className="underline hover:text-primary">roadmap.sh</a>,
+            usati con attribuzione. Le lezioni sono generate dalla AI e possono contenere errori: verifica sui materiali ufficiali.
+          </footer>
         </>
       )}
     </div>

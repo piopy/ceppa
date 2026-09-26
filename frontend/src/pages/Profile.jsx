@@ -47,7 +47,7 @@ export default function Profile() {
       });
     } catch (err) {
       console.error('Failed to fetch settings:', err);
-      setErrorMsg('Failed to load settings');
+      setErrorMsg('Impostazioni non caricate.');
     } finally {
       setLoading(false);
     }
@@ -68,11 +68,11 @@ export default function Profile() {
       if (settings.custom_tavily_api_key.trim()) payload.custom_tavily_api_key = settings.custom_tavily_api_key.trim();
       await client.put('/users/me/settings', payload);
       setSettings((p) => ({ ...p, custom_openai_api_key: '', custom_tavily_api_key: '' }));
-      setSuccessMsg('Settings saved successfully!');
+      setSuccessMsg('Impostazioni salvate.');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
       console.error('Failed to save settings:', err);
-      setErrorMsg(err.response?.data?.detail || 'Failed to save settings');
+      setErrorMsg(err.response?.data?.detail || 'Salvataggio non riuscito.');
     } finally {
       setSaving(false);
     }
@@ -100,13 +100,13 @@ export default function Profile() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-2xl font-bold">Profile Settings</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Profilo</h1>
       </div>
 
       {/* Info Box */}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6">
         <p className="text-sm text-blue-700 dark:text-blue-300">
-          Override the default LLM and web research settings with your own API keys. Leave fields empty to use the server defaults.
+          Sostituisci le impostazioni LLM e ricerca web con le tue chiavi. Lascia vuoto per usare i default del server.
         </p>
       </div>
 
@@ -114,7 +114,7 @@ export default function Profile() {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Bot className="w-5 h-5 text-primary" />
-          LLM Configuration
+          Configurazione LLM
         </h2>
 
         <div className="space-y-4">
@@ -123,7 +123,7 @@ export default function Profile() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               <span className="flex items-center gap-1">
                 <Key className="w-4 h-4" />
-                OpenAI-compatible API Key
+                Chiave API compatibile OpenAI
               </span>
             </label>
             <div className="relative">
@@ -144,12 +144,12 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Base URL */}
+          {/* URL base */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               <span className="flex items-center gap-1">
                 <Server className="w-4 h-4" />
-                Base URL
+                URL base
               </span>
             </label>
             <input
@@ -166,7 +166,7 @@ export default function Profile() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               <span className="flex items-center gap-1">
                 <Bot className="w-4 h-4" />
-                Model Name
+                Modello
               </span>
             </label>
             <input
@@ -184,14 +184,14 @@ export default function Profile() {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Search className="w-5 h-5 text-primary" />
-          Web Research (Tavily)
+          Ricerca web (Tavily)
         </h2>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             <span className="flex items-center gap-1">
               <Key className="w-4 h-4" />
-              Tavily API Key
+              Chiave API Tavily
             </span>
           </label>
           <div className="relative">
@@ -217,13 +217,13 @@ export default function Profile() {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Download className="w-5 h-5 text-primary" />
-          Data Export / Import
+          Export / Import dati
         </h2>
 
         <div className="space-y-4">
           <div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              Export all your courses, labs, Q&amp;A history, and progress as a JSON file for backup or migration.
+              Esporta corsi, lab, domande e progressi in JSON per backup o migrazione.
             </p>
             <button
               onClick={async () => {
@@ -232,7 +232,7 @@ export default function Profile() {
                   await exportUserData();
                 } catch (err) {
                   console.error('Export failed:', err);
-                  setErrorMsg('Export failed: ' + (err.response?.data?.detail || err.message));
+                  setErrorMsg('Export non riuscito: ' + (err.response?.data?.detail || err.message));
                 } finally {
                   setExporting(false);
                 }
@@ -245,7 +245,7 @@ export default function Profile() {
               ) : (
                 <Download className="w-4 h-4" />
               )}
-              {exporting ? 'Exporting...' : 'Export All Data'}
+              {exporting ? 'Esporto...' : 'Esporta tutto'}
             </button>
           </div>
 
@@ -253,7 +253,7 @@ export default function Profile() {
 
           <div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              Import data from a previous export file. This will add courses and labs to your existing data.
+              Importa da un export precedente. Aggiunge corsi e lab a quelli esistenti.
             </p>
             <div className="flex items-center gap-3">
               <input
@@ -284,7 +284,7 @@ export default function Profile() {
                   const msg = Array.isArray(detail)
                     ? detail.map(d => d.msg || JSON.stringify(d)).join('; ')
                     : detail || err.message;
-                  setErrorMsg('Import failed: ' + msg);
+                  setErrorMsg('Import non riuscito: ' + msg);
                   } finally {
                     setImporting(false);
                   }
@@ -297,16 +297,13 @@ export default function Profile() {
                 ) : (
                   <Upload className="w-4 h-4" />
                 )}
-                {importing ? 'Importing...' : 'Import'}
+                {importing ? 'Importo...' : 'Importa'}
               </button>
             </div>
             {importResult && (
               <div className="mt-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
                 <p className="text-sm text-green-700 dark:text-green-300">
-                  Import completed: {importResult.courses_imported} course{importResult.courses_imported !== 1 ? 's' : ''},{' '}
-                  {importResult.lessons_imported} lesson{importResult.lessons_imported !== 1 ? 's' : ''},{' '}
-                  {importResult.hands_on_courses_imported} lab course{importResult.hands_on_courses_imported !== 1 ? 's' : ''},{' '}
-                  {importResult.labs_imported} lab{importResult.labs_imported !== 1 ? 's' : ''} imported.
+                  Importati: {importResult.courses_imported} corsi, {importResult.lessons_imported} lezioni, {importResult.hands_on_courses_imported} corsi lab, {importResult.labs_imported} lab.
                 </p>
               </div>
             )}
@@ -337,7 +334,7 @@ export default function Profile() {
         ) : (
           <Save className="w-5 h-5" />
         )}
-        {saving ? 'Saving...' : 'Save Settings'}
+        {saving ? 'Salvo...' : 'Salva impostazioni'}
       </button>
     </div>
   );

@@ -101,7 +101,7 @@ function SortableCourseCard({ course, onDelete, onRename, deleting, renaming, id
           }}
           disabled={renaming === course.id}
           className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition disabled:opacity-50"
-          title="Rename course"
+          title="Rinomina corso"
         >
           {renaming === course.id ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -118,7 +118,7 @@ function SortableCourseCard({ course, onDelete, onRename, deleting, renaming, id
           }}
           disabled={deleting === course.id}
           className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50"
-          title="Delete course"
+          title="Elimina corso"
         >
           {deleting === course.id ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -207,7 +207,7 @@ export default function Dashboard() {
         fetchTavilyCredits();
       }
     } catch (err) {
-      toast.error('Generation failed. Check your API key/Backend.');
+      toast.error('Generazione non riuscita. Controlla API key e backend.');
     } finally {
       setCreating(false);
     }
@@ -225,7 +225,7 @@ export default function Dashboard() {
       setCourses(courses.filter(c => c.id !== courseId));
       toast.success('Corso eliminato.');
     } catch (err) {
-      toast.error('Failed to delete course.');
+      toast.error('Eliminazione non riuscita.');
     } finally {
       setDeleting(null);
     }
@@ -243,7 +243,7 @@ export default function Dashboard() {
       const res = await client.put(`/courses/${courseId}`, { title: name });
       setCourses(courses.map(c => c.id === courseId ? { ...c, title: res.data.title } : c));
     } catch (err) {
-      toast.error('Failed to rename course.');
+      toast.error('Rinomina non riuscita.');
     } finally {
       setRenaming(null);
     }
@@ -304,7 +304,7 @@ export default function Dashboard() {
         course_order: newOrder.map(c => c.id) 
       });
     } catch (err) {
-      toast.error('Failed to save new order. Reverting...');
+      toast.error('Ordine non salvato. Ripristino...');
       // Rollback on error
       setCourses(oldOrder);
     }
@@ -385,7 +385,7 @@ export default function Dashboard() {
               className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition disabled:opacity-50"
             >
               {showCustomInstructions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              {showCustomInstructions ? 'Hide' : 'Add'} custom instructions
+              {showCustomInstructions ? 'Nascondi' : 'Aggiungi'} istruzioni custom
             </button>
             
             {showCustomInstructions && (
@@ -457,7 +457,7 @@ export default function Dashboard() {
           <Empty
             icon={<BookOpen className="h-10 w-10" />}
             title="Nessun corso ancora"
-            hint="Scrivi un argomento sopra e premi Learn now."
+            hint="Scrivi un argomento sopra e premi Crea corso."
           />
         ) : (
           <>
@@ -502,12 +502,12 @@ export default function Dashboard() {
                     <h4 className="text-2xl font-bold mb-4 text-primary dark:text-gray-100">{activeCourse.title}</h4>
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                       <Clock className="w-4 h-4" />
-                      <span>Started {new Date(activeCourse.created_at).toLocaleDateString()}</span>
+                      <span>Iniziato il {new Date(activeCourse.created_at).toLocaleDateString()}</span>
                     </div>
                     {activeCourse.all_lessons_completed && (
                       <div className="mt-3 flex items-center gap-1 text-green-600 text-sm font-medium">
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>Completed</span>
+                        <span>Fatto</span>
                       </div>
                     )}
                   </div>
@@ -524,7 +524,7 @@ export default function Dashboard() {
                   className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  Previous
+                  Indietro
                 </button>
                 
                 <div className="flex items-center gap-2">
@@ -548,7 +548,7 @@ export default function Dashboard() {
                   disabled={page >= Math.ceil(totalCourses / PAGE_SIZE)}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                 >
-                  Next
+                  Avanti
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>

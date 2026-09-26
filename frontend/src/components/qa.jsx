@@ -210,7 +210,7 @@ export function Thread({ items, onAsk, onDelete, onChat, asking, deletingId }) {
         <div className="flex gap-3">
           <input
             type="text"
-            placeholder="Ask a question..."
+            placeholder="Fai una domanda..."
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             disabled={asking}
@@ -225,8 +225,8 @@ export function Thread({ items, onAsk, onDelete, onChat, asking, deletingId }) {
         {roots.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 dark:bg-gray-900 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
             <MessageCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-500 dark:text-gray-400 font-medium">No questions yet</p>
-            <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Be the first to ask something!</p>
+            <p className="text-gray-500 dark:text-gray-400 font-medium">Nessuna domanda</p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Fai la prima domanda!</p>
           </div>
         ) : (
           roots.map((n) => (

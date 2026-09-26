@@ -114,13 +114,13 @@ export default function Layout() {
             className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 dark:bg-white/5 dark:hover:bg-white/10 transition"
           >
             <Github className="w-5 h-5" />
-            <span className="text-sm font-medium">View on GitHub</span>
+            <span className="text-sm font-medium">Vedi su GitHub</span>
           </a>
         </div>
 
         <div className="p-4 border-t border-white/10 dark:border-white/5">
           <div className="flex items-center gap-3 px-4 py-3">
-             <Link to="/profile" className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold hover:ring-2 hover:ring-white/40 transition" title="Profile Settings">
+             <Link to="/profile" className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold hover:ring-2 hover:ring-white/40 transition" title="Impostazioni profilo">
                {user?.username?.[0]?.toUpperCase()}
              </Link>
              <div className="flex-1 overflow-hidden">

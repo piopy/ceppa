@@ -78,7 +78,7 @@ export default function HandsOnLabs() {
       // Navigate to the newly created lab course
       navigate(`/labs/${res.data.id}`);
     } catch (err) {
-      toast.error('Failed to create hands-on course: ' + (err.response?.data?.detail || err.message));
+      toast.error('Corso non creato: ' + (err.response?.data?.detail || err.message));
     } finally {
       setCreating(false);
     }
@@ -92,9 +92,9 @@ export default function HandsOnLabs() {
     try {
       await client.delete(`/hands-on/${courseId}`);
       setCourses(courses.filter(c => c.id !== courseId));
-      toast.success('Lab course eliminato.');
+      toast.success('Corso eliminato.');
     } catch (err) {
-      toast.error('Failed to delete course.');
+      toast.error('Eliminazione non riuscita.');
     } finally {
       setDeleting(null);
     }
@@ -124,7 +124,7 @@ export default function HandsOnLabs() {
           <div className="flex gap-4 items-center">
             <input 
               type="text" 
-              placeholder="e.g., Docker, Kubernetes, AWS Deployment..."
+              placeholder="es. Docker, Kubernetes, deploy AWS..."
               value={newTopic}
               onChange={e => setNewTopic(e.target.value)}
               disabled={creating}
@@ -159,7 +159,7 @@ export default function HandsOnLabs() {
             {language === 'custom' && (
               <input 
                 type="text" 
-                placeholder="e.g., es, fr, de..."
+                placeholder="es. es, fr, de..."
                 value={customLanguage}
                 onChange={e => setCustomLanguage(e.target.value)}
                 disabled={creating}
@@ -172,7 +172,7 @@ export default function HandsOnLabs() {
               className="px-8 py-4 bg-primary text-white font-bold rounded-2xl hover:bg-indigo-700 active:scale-[0.98] transition flex items-center gap-2 disabled:opacity-50"
             >
               {creating ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6" />}
-              {creating ? 'Creating Lab...' : 'Create Lab Course'}
+              {creating ? 'Creo...' : 'Crea corso lab'}
             </button>
           </div>
           
@@ -185,7 +185,7 @@ export default function HandsOnLabs() {
               className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition disabled:opacity-50"
             >
               {showCustomInstructions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              {showCustomInstructions ? 'Hide' : 'Add'} custom instructions
+              {showCustomInstructions ? 'Nascondi' : 'Aggiungi'} istruzioni custom
             </button>
             
             {showCustomInstructions && (
@@ -199,7 +199,7 @@ export default function HandsOnLabs() {
                   value={customInstructions}
                   onChange={(e) => setCustomInstructions(e.target.value)}
                   disabled={creating}
-                  placeholder="e.g., Focus on cloud deployment scenarios, include CI/CD pipeline exercises..."
+                  placeholder="es. scenari cloud, esercizi CI/CD..."
                   rows={3}
                   className="w-full px-4 py-3 text-sm border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition outline-none shadow-sm resize-none"
                 />
@@ -219,10 +219,10 @@ export default function HandsOnLabs() {
               />
               <Globe className={`w-5 h-5 ${useWebResearch ? 'text-indigo-700 dark:text-indigo-400' : 'text-gray-400'} transition`} />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Enrich with web research
+                Arricchisci con ricerca web
                 {tavilyCredits && tavilyCredits.enabled && tavilyCredits.remaining !== undefined && (
                   <span className="ml-2 text-xs text-gray-500">
-                    ({tavilyCredits.remaining} credits remaining)
+                    ({tavilyCredits.remaining} crediti rimasti)
                   </span>
                 )}
               </span>
@@ -235,7 +235,7 @@ export default function HandsOnLabs() {
       <section>
         <h3 className="text-xl font-bold mb-6 flex items-center gap-2 dark:text-gray-100">
           <Play className="w-6 h-6 text-indigo-500" />
-          My Lab Courses
+          I tuoi lab
         </h3>
         
         {loading ? (
@@ -270,18 +270,18 @@ export default function HandsOnLabs() {
                     <h4 className="text-xl font-bold leading-snug tracking-tight mb-4 group-hover:text-indigo-500 transition pr-8 dark:text-gray-100">{course.title}</h4>
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
                       <Clock className="w-4 h-4" />
-                      <span>Created {new Date(course.created_at).toLocaleDateString()}</span>
+                      <span>Creato il {new Date(course.created_at).toLocaleDateString()}</span>
                     </div>
                     {course.total_labs > 0 && (
                       <div className="flex items-center gap-2 text-sm">
                         <span className="text-indigo-500 font-medium">{course.completed_labs}/{course.total_labs}</span>
-                        <span className="text-gray-400">labs completed</span>
+                        <span className="text-gray-400">lab fatti</span>
                       </div>
                     )}
                     {course.all_labs_completed && (
                       <div className="mt-2 flex items-center gap-1 text-green-600 text-sm font-medium">
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>All labs completed!</span>
+                        <span>Tutti i lab fatti!</span>
                       </div>
                     )}
                   </div>
@@ -292,7 +292,7 @@ export default function HandsOnLabs() {
                       onClick={(e) => handleDeleteCourse(e, course.id)}
                       disabled={deleting === course.id}
                       className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50"
-                      title="Delete lab course"
+                      title="Elimina corso lab"
                     >
                       {deleting === course.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -314,17 +314,17 @@ export default function HandsOnLabs() {
                   className="flex items-center gap-1 px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-750 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  Previous
+                  Indietro
                 </button>
                 <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                  Page {page + 1} of {totalPages}
+                  Pagina {page + 1} di {totalPages}
                 </span>
                 <button
                   onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
                   className="flex items-center gap-1 px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-750 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                 >
-                  Next
+                  Avanti
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>

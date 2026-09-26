@@ -72,7 +72,7 @@ export default function LabView() {
   const [viewingLabPdf, setViewingLabPdf] = useState(false);
   const [downloadingLabPdf, setDownloadingLabPdf] = useState(false);
   
-  // Regenerate Lab State
+  // Rigenera State
   const [showRegenerateModal, setShowRegenerateModal] = useState(false);
   const [regenerateFeedback, setRegenerateFeedback] = useState('');
   const [regenerateMode, setRegenerateMode] = useState('guided');
@@ -165,7 +165,7 @@ export default function LabView() {
       // Fetch questions for this lab
       fetchQuestions(res.data.id);
     } catch (err) {
-      toast.error('Failed to load lab content.');
+      toast.error('Lab non caricato. Riprova.');
     } finally {
       setLabLoading(false);
     }
@@ -192,7 +192,7 @@ export default function LabView() {
       const res = await client.get(`/hands-on/${courseId}/labs/${currentLab.id}/questions`);
       setQuestions(res.data);
     } catch (err) {
-      toast.error('Failed to ask question. Please try again.');
+      toast.error('Domanda non inviata. Riprova.');
     } finally {
       setAskingQuestion(false);
     }
@@ -207,7 +207,7 @@ export default function LabView() {
       const res = await client.get(`/hands-on/${courseId}/labs/${currentLab.id}/questions`);
       setQuestions(res.data);
     } catch (err) {
-      toast.error('Failed to delete question. Please try again.');
+      toast.error('Eliminazione non riuscita. Riprova.');
     } finally {
       setDeletingQuestion(null);
     }
@@ -218,7 +218,7 @@ export default function LabView() {
       const res = await client.post(`/hands-on/${courseId}/labs/${currentLab.id}/questions/${node.id}/chat`);
       setChat({ cid: res.data.conversation_id, messages: chainFor(questions, node), parent: res.data.parent_id });
     } catch (err) {
-      toast.error('Failed to start chat.');
+      toast.error('Chat non avviata.');
     }
   };
 
@@ -233,7 +233,7 @@ export default function LabView() {
       const qres = await client.get(`/hands-on/${courseId}/labs/${currentLab.id}/questions`);
       setQuestions(qres.data);
     } catch (err) {
-      toast.error('Failed to send message.');
+      toast.error('Messaggio non inviato.');
     } finally {
       setChatSending(false);
     }
@@ -265,11 +265,11 @@ export default function LabView() {
       await client.put(`/hands-on/${course.id}/labs/${currentLab.id}`, {
         user_notes: notes
       });
-      setSuccessMsg('Notes saved!');
+      setSuccessMsg('Note salvate.');
       setCurrentLab(prev => ({ ...prev, user_notes: notes }));
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
-      toast.error('Failed to save notes.');
+      toast.error('Note non salvate. Riprova.');
     } finally {
       setSavingNotes(false);
     }
@@ -288,7 +288,7 @@ export default function LabView() {
         [currentLab.path_in_index]: newCompletedState ? 'completed' : 'generated'
       }));
     } catch (err) {
-      toast.error('Failed to update progress.');
+      toast.error('Progresso non aggiornato.');
     }
   };
 
@@ -381,7 +381,7 @@ export default function LabView() {
             toast.warning(`Generazione completata con ${res.data.failed} errori.`);
             console.error('Generation errors:', res.data.errors);
           } else {
-            setSuccessMsg('Tutti i lab sono stati generati con successo!');
+            setSuccessMsg('Tutti i lab generati.');
           }
         }
       } catch (err) {
@@ -394,7 +394,7 @@ export default function LabView() {
 
   const handleRegenerateLab = async () => {
     if (!regenerateFeedback.trim()) {
-      toast.warning('Please provide feedback on what to improve.');
+      toast.warning('Scrivi cosa migliorare.');
       return;
     }
     setRegenerating(true);
@@ -404,7 +404,7 @@ export default function LabView() {
         mode: regenerateMode
       });
       setCurrentLab(res.data);
-      setSuccessMsg('Lab regenerated successfully!');
+      setSuccessMsg('Lab rigenerato.');
       setShowRegenerateModal(false);
       setRegenerateFeedback('');
 
@@ -414,7 +414,7 @@ export default function LabView() {
       setLabMeta(meta);
       setViewMode(meta.mode || 'guided');
     } catch (err) {
-      toast.error('Failed to regenerate lab.');
+      toast.error('Rigenerazione non riuscita.');
     } finally {
       setRegenerating(false);
     }
@@ -423,7 +423,7 @@ export default function LabView() {
   const completedSteps = labSteps.filter(s => s.is_completed).length;
   const totalSteps = labSteps.length;
 
-  if (loading) return <div className="p-10 text-center"><Loader2 className="animate-spin inline mr-2" />Loading lab course...</div>;
+  if (loading) return <div className="p-10 text-center"><Loader2 className="animate-spin inline mr-2" />Carico corso...</div>;
 
   return (
     <div className="flex bg-white dark:bg-gray-900 shadow-2xl rounded-l-3xl overflow-hidden h-full">
@@ -437,7 +437,7 @@ export default function LabView() {
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-indigo-500 transition mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Labs
+          Torna ai lab
         </button>
 
         {/* Spine project banner */}
@@ -463,7 +463,7 @@ export default function LabView() {
         {labLoading ? (
           <div className="h-full flex flex-col items-center justify-center space-y-4">
             <Loader2 className="w-16 h-16 text-indigo-500 animate-spin" />
-            <p className="text-xl font-medium text-gray-500 dark:text-gray-300">Generating your lab session...</p>
+            <p className="text-xl font-medium text-gray-500 dark:text-gray-300">Genero il lab...</p>
           </div>
         ) : currentLab ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`${
@@ -481,7 +481,7 @@ export default function LabView() {
                 title={favoriteLabs[currentLab.path_in_index] ? 'Remove from favorites' : 'Add to favorites'}
               >
                 <Star className={`w-4 h-4 ${favoriteLabs[currentLab.path_in_index] ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-                {favoriteLabs[currentLab.path_in_index] ? 'Favorited' : 'Favorite'}
+                {favoriteLabs[currentLab.path_in_index] ? 'Nei preferiti' : 'Preferiti'}
               </button>
               <button
                 onClick={() => {
@@ -496,17 +496,17 @@ export default function LabView() {
                     ? 'bg-indigo-500 text-white hover:bg-indigo-700' 
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
-                title="Toggle Immersive Reading Mode"
+                title="Lettura immersiva"
               >
                 <Maximize2 className="w-4 h-4" />
-                {isImmersiveMode ? 'Exit Immersive' : 'Immersive Reader'}
+                {isImmersiveMode ? 'Esci' : 'Immersiva'}
               </button>
               <button
                 onClick={() => setShowRegenerateModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition"
               >
                 <RefreshCcw className="w-4 h-4" />
-                Regenerate Lab
+                Rigenera
               </button>
             </div>
 
@@ -527,7 +527,7 @@ export default function LabView() {
                 }`}
               >
                 <CheckCircle2 className="w-5 h-5" />
-                {currentLab.is_completed ? 'Completed' : 'Mark Complete'}
+                {currentLab.is_completed ? 'Fatto' : 'Segna fatto'}
               </button>
             </div>
 
@@ -535,7 +535,7 @@ export default function LabView() {
             {totalSteps > 0 && (
               <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="font-medium text-gray-700 dark:text-gray-300">Lab Progress</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">Progresso lab</span>
                   <span className="font-bold text-indigo-500">{completedSteps}/{totalSteps} steps</span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
@@ -608,7 +608,7 @@ export default function LabView() {
                 <div className="flex items-center gap-3">
                   <BookOpen className="w-5 h-5 text-blue-500" />
                   <span className="font-bold text-gray-900 dark:text-gray-100">
-                    Theory Background {showTheory ? '(hide)' : '(show)'}
+                    Teoria {showTheory ? '(nascondi)' : '(mostra)'}
                   </span>
                 </div>
                 {showTheory ? (
@@ -624,11 +624,11 @@ export default function LabView() {
               )}
             </div>
 
-            {/* Practical Steps */}
+            {/* Passi pratici */}
             <div className="space-y-4 mb-8">
               <h3 className={`text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-gray-100 ${isImmersiveMode ? 'text-2xl' : ''}`}>
                 <Terminal className="w-6 h-6 text-indigo-500" />
-                Practical Steps
+                Passi pratici
               </h3>
               
               {labSteps.length === 0 ? (
@@ -757,13 +757,13 @@ export default function LabView() {
               <textarea 
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
-                placeholder="Record your observations, command outputs, errors, or reflections here..."
+                placeholder="Osservazioni, output, errori, riflessioni..."
                 className="w-full h-36 p-4 border dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition"
               />
               {notes !== (currentLab.user_notes || '') && (
                 <p className="text-sm text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
                   <Loader2 className="w-3 h-3" />
-                  You have unsaved changes
+                  Modifiche non salvate
                 </p>
               )}
               <div className="mt-4 flex items-center gap-4 flex-wrap">
@@ -773,7 +773,7 @@ export default function LabView() {
                   className="flex items-center gap-2 px-6 py-3 bg-indigo-500 text-white rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50"
                 >
                   {savingNotes ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                  Save Notes
+                  Salva note
                 </button>
                 {currentLab.id && (
                   <>
@@ -788,7 +788,7 @@ export default function LabView() {
                           window.open(url, '_blank');
                           setTimeout(() => window.URL.revokeObjectURL(url), 60000);
                         } catch (err) {
-                          toast.error('Failed to load PDF. Please try again.');
+                          toast.error('PDF non caricato. Riprova.');
                         } finally {
                           setViewingLabPdf(false);
                         }
@@ -797,7 +797,7 @@ export default function LabView() {
                       className="flex items-center gap-2 px-6 py-3 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-800 transition disabled:opacity-50"
                     >
                       {viewingLabPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileTextIcon className="w-5 h-5" />}
-                      {viewingLabPdf ? 'Generating PDF...' : 'View PDF'}
+                      {viewingLabPdf ? 'Genero PDF...' : 'Vedi PDF'}
                     </button>
                     <button
                       onClick={async () => {
@@ -815,7 +815,7 @@ export default function LabView() {
                           link.parentNode.removeChild(link);
                           window.URL.revokeObjectURL(url);
                         } catch (err) {
-                          toast.error('Failed to download PDF. Please try again.');
+                          toast.error('PDF non scaricato. Riprova.');
                         } finally {
                           setDownloadingLabPdf(false);
                         }
@@ -824,7 +824,7 @@ export default function LabView() {
                       className="flex items-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition disabled:opacity-50"
                     >
                       {downloadingLabPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-                      {downloadingLabPdf ? 'Generating PDF...' : 'Download PDF'}
+                      {downloadingLabPdf ? 'Genero PDF...' : 'Scarica PDF'}
                     </button>
                   </>
                 )}
@@ -836,7 +836,7 @@ export default function LabView() {
             <section className="mt-12 border-t dark:border-gray-700 pt-12">
               <h3 className="text-2xl font-bold mb-6 flex items-center gap-2 text-gray-900 dark:text-gray-100">
                 <MessageCircle className="w-6 h-6 text-indigo-500" />
-                Ask the AI Assistant
+                Chiedi alla AI
               </h3>
 
               <Thread
@@ -885,7 +885,7 @@ export default function LabView() {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <FlaskConical className="w-5 h-5 text-indigo-500" />
-                <h2 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Lab Index</h2>
+                <h2 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Indice lab</h2>
               </div>
               <button
                 onClick={handleGenerateAll}
@@ -900,12 +900,12 @@ export default function LabView() {
                 {generatingAll ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Generating...</span>
+                    <span>Genero...</span>
                   </>
                 ) : (
                   <>
                     <Zap className="w-3.5 h-3.5" />
-                    <span>Generate All</span>
+                    <span>Genera tutto</span>
                   </>
                 )}
               </button>
@@ -965,7 +965,7 @@ export default function LabView() {
             {/* Progress Bar */}
             <div className="mt-4">
               <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-                <span>Progress</span>
+                <span>Progresso</span>
                 <span className="font-semibold">
                   <span className="text-green-600 dark:text-green-400">{Object.values(generatedLabs).filter(s => s === 'completed').length}</span>
                   <span className="text-gray-400 mx-1">/</span>
@@ -1029,7 +1029,7 @@ export default function LabView() {
                   window.URL.revokeObjectURL(url);
                 } catch (err) {
                   console.error('Download failed:', err);
-                  toast.error('Failed to download full course PDF. Make sure all labs are generated.');
+                  toast.error('PDF non scaricato. Genera prima tutti i lab.');
                 } finally {
                   setDownloadingPdf(false);
                 }
@@ -1050,7 +1050,7 @@ export default function LabView() {
               ) : (
                 <>
                   <Download className="w-5 h-5" />
-                  {areAllLabsGenerated() ? 'Download PDF' : `Waiting for ${getTotalLabs() - getGeneratedCount()} lab(s)...`}
+                  {areAllLabsGenerated() ? 'Scarica PDF' : `Attendo ${getTotalLabs() - getGeneratedCount()} lab...`}
                 </>
               )}
             </button>
@@ -1073,7 +1073,7 @@ export default function LabView() {
                   window.URL.revokeObjectURL(url);
                 } catch (err) {
                   console.error('Download failed:', err);
-                  toast.error('Failed to download full course EPUB. Make sure all labs are generated.');
+                  toast.error('EPUB non scaricato. Genera prima tutti i lab.');
                 } finally {
                   setDownloadingEpub(false);
                 }
@@ -1110,14 +1110,14 @@ export default function LabView() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full p-8"
           >
-            <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Regenerate Lab</h3>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Rigenera lab</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               Please describe what you'd like to improve or change in this lab. The AI will regenerate the content based on your feedback.
             </p>
             <textarea
               value={regenerateFeedback}
               onChange={e => setRegenerateFeedback(e.target.value)}
-              placeholder="e.g., Add more practical examples, simplify the theory, include more command-line exercises..."
+              placeholder="es. più esempi, teoria semplice, più esercizi..."
               className="w-full h-40 p-4 border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition resize-none"
               disabled={regenerating}
             />
@@ -1155,7 +1155,7 @@ export default function LabView() {
                 {regenerating ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Regenerating...
+                    Rigenero...
                   </>
                 ) : (
                   <>

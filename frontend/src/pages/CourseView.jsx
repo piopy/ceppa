@@ -121,7 +121,7 @@ export default function CourseView() {
         pollForPdf(res.data.id);
       }
     } catch (err) {
-      toast.error('Failed to load lesson content.');
+      toast.error('Lezione non caricata. Riprova.');
     } finally {
       setLessonLoading(false);
     }
@@ -168,7 +168,7 @@ export default function CourseView() {
       const res = await client.get(`/lessons/${currentLesson.id}/questions`);
       setQuestions(res.data);
     } catch (err) {
-      toast.error('Failed to ask question. Please try again.');
+      toast.error('Domanda non inviata. Riprova.');
     } finally {
       setAskingQuestion(false);
     }
@@ -183,7 +183,7 @@ export default function CourseView() {
       const res = await client.get(`/lessons/${currentLesson.id}/questions`);
       setQuestions(res.data);
     } catch (err) {
-      toast.error('Failed to delete question. Please try again.');
+      toast.error('Eliminazione non riuscita. Riprova.');
     } finally {
       setDeletingQuestion(null);
     }
@@ -195,7 +195,7 @@ export default function CourseView() {
       // Pannello con thread intero, non solo seed singolo
       setChat({ cid: res.data.conversation_id, messages: chainFor(questions, node), parent: res.data.parent_id });
     } catch (err) {
-      toast.error('Failed to start chat.');
+      toast.error('Chat non avviata.');
     }
   };
 
@@ -210,7 +210,7 @@ export default function CourseView() {
       const qres = await client.get(`/lessons/${currentLesson.id}/questions`);
       setQuestions(qres.data);
     } catch (err) {
-      toast.error('Failed to send message.');
+      toast.error('Messaggio non inviato.');
     } finally {
       setChatSending(false);
     }
@@ -222,12 +222,12 @@ export default function CourseView() {
       await client.put(`/lessons/${currentLesson.id}`, {
         user_notes: notes
       });
-      setSuccessMsg('Notes saved successfully!');
+      setSuccessMsg('Note salvate.');
       // Update current lesson to reflect saved state
       setCurrentLesson(prev => ({ ...prev, user_notes: notes }));
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
-      toast.error('Failed to save notes.');
+      toast.error('Note non salvate. Riprova.');
     } finally {
       setSavingNotes(false);
     }
@@ -246,13 +246,13 @@ export default function CourseView() {
         [currentLesson.path_in_index]: newCompletedState ? 'completed' : 'generated'
       }));
     } catch (err) {
-      toast.error('Failed to update progress.');
+      toast.error('Progresso non aggiornato.');
     }
   };
 
   const handleRegenerate = async () => {
     if (!regenerateFeedback.trim()) {
-      toast.warning('Please provide feedback on what to improve.');
+      toast.warning('Scrivi cosa migliorare.');
       return;
     }
     setRegenerating(true);
@@ -261,7 +261,7 @@ export default function CourseView() {
         feedback: regenerateFeedback
       });
       setCurrentLesson(res.data);
-      setSuccessMsg('Lesson regenerated successfully!');
+      setSuccessMsg('Lezione rigenerata.');
       setShowRegenerateModal(false);
       setRegenerateFeedback('');
       
@@ -270,7 +270,7 @@ export default function CourseView() {
         pollForPdf(res.data.id);
       }
     } catch (err) {
-      toast.error('Failed to regenerate lesson.');
+      toast.error('Rigenerazione non riuscita.');
     } finally {
       setRegenerating(false);
     }
@@ -389,7 +389,7 @@ export default function CourseView() {
             toast.warning(`Generazione completata con ${res.data.failed} errori.`);
             console.error('Generation errors:', res.data.errors);
           } else {
-            setSuccessMsg('Tutte le lezioni sono state generate con successo!');
+            setSuccessMsg('Tutte le lezioni generate.');
           }
         }
       } catch (err) {
@@ -400,7 +400,7 @@ export default function CourseView() {
     }, 2000); // Poll every 2 seconds
   };
 
-  if (loading) return <div className="p-10 text-center"><Loader2 className="animate-spin inline mr-2" />Loading course...</div>;
+  if (loading) return <div className="p-10 text-center"><Loader2 className="animate-spin inline mr-2" />Carico corso...</div>;
 
   return (
     <div className="flex bg-white dark:bg-gray-900 shadow-2xl rounded-l-3xl overflow-hidden h-full">
@@ -411,7 +411,7 @@ export default function CourseView() {
         {lessonLoading ? (
           <div className="h-full flex flex-col items-center justify-center space-y-4">
              <Loader2 className="w-16 h-16 text-primary animate-spin" />
-             <p className="text-xl font-medium text-gray-500 dark:text-gray-300">LLM is generating your deep lesson...</p>
+             <p className="text-xl font-medium text-gray-500 dark:text-gray-300">La AI sta generando la lezione...</p>
           </div>
         ) : currentLesson ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`${
@@ -429,7 +429,7 @@ export default function CourseView() {
                 title={favoriteLessons[currentLesson.path_in_index] ? 'Remove from favorites' : 'Add to favorites'}
               >
                 <Star className={`w-4 h-4 ${favoriteLessons[currentLesson.path_in_index] ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-                {favoriteLessons[currentLesson.path_in_index] ? 'Favorited' : 'Favorite'}
+                {favoriteLessons[currentLesson.path_in_index] ? 'Nei preferiti' : 'Preferiti'}
               </button>
               <button
                 onClick={() => {
@@ -446,17 +446,17 @@ export default function CourseView() {
                     ? 'bg-primary text-white hover:bg-indigo-700' 
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
-                title="Toggle Immersive Reading Mode"
+                title="Lettura immersiva"
               >
                 <Maximize2 className="w-4 h-4" />
-                {isImmersiveMode ? 'Exit Immersive' : 'Immersive Reader'}
+                {isImmersiveMode ? 'Esci' : 'Immersiva'}
               </button>
               <button
                 onClick={() => setShowRegenerateModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition"
               >
                 <RefreshCcw className="w-4 h-4" />
-                Regenerate Lesson
+                Rigenera
               </button>
             </div>
             
@@ -473,18 +473,18 @@ export default function CourseView() {
             <section className="bg-gray-50 dark:bg-gray-800 p-8 rounded-2xl">
               <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-gray-100">
                 <Send className="w-5 h-5 text-primary" />
-                Exercise Results & Notes
+                Esercizi e note
               </h3>
               <textarea 
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
-                placeholder="Paste your code, output, or reflection here..."
+                placeholder="Incolla codice, output o riflessioni..."
                 className="w-full h-48 p-4 border dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:ring-2 focus:ring-primary outline-none transition"
               />
               {notes !== (currentLesson.user_notes || '') && (
                 <p className="text-sm text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
                   <Loader2 className="w-3 h-3" />
-                  You have unsaved changes
+                  Modifiche non salvate
                 </p>
               )}
               <div className="mt-6 flex items-center justify-between">
@@ -495,14 +495,14 @@ export default function CourseView() {
                     className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {savingNotes ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                    {savingNotes ? 'Saving...' : 'Save Notes'}
+                    {savingNotes ? 'Salvo...' : 'Salva note'}
                   </button>
                   <button 
                     onClick={handleToggleCompletion}
                     className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition ${currentLesson.is_completed ? 'bg-green-100 text-green-700' : 'bg-primary text-white hover:bg-indigo-700'}`}
                   >
                     <CheckCircle2 className="w-5 h-5" />
-                    {currentLesson.is_completed ? 'Completed' : 'Mark as Completed'}
+                    {currentLesson.is_completed ? 'Fatto' : 'Segna fatto'}
                   </button>
                    {currentLesson.id && (
                     <>
@@ -517,7 +517,7 @@ export default function CourseView() {
                             window.open(url, '_blank');
                             setTimeout(() => window.URL.revokeObjectURL(url), 60000);
                           } catch (err) {
-                            toast.error('Failed to load PDF. Please try again.');
+                            toast.error('PDF non caricato. Riprova.');
                           } finally {
                             setViewingPdf(false);
                           }
@@ -526,7 +526,7 @@ export default function CourseView() {
                         className="flex items-center gap-2 px-6 py-3 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold hover:bg-indigo-200 dark:hover:bg-indigo-800 transition disabled:opacity-50"
                       >
                         {viewingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
-                        {viewingPdf ? 'Generating PDF...' : 'View PDF'}
+                        {viewingPdf ? 'Genero PDF...' : 'Vedi PDF'}
                       </button>
                       <button
                         onClick={async () => {
@@ -544,7 +544,7 @@ export default function CourseView() {
                             link.parentNode.removeChild(link);
                             window.URL.revokeObjectURL(url);
                           } catch (err) {
-                            toast.error('Failed to download PDF. Please try again.');
+                            toast.error('PDF non scaricato. Riprova.');
                           } finally {
                             setDownloadingSinglePdf(false);
                           }
@@ -553,7 +553,7 @@ export default function CourseView() {
                         className="flex items-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition disabled:opacity-50"
                       >
                         {downloadingSinglePdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-                        {downloadingSinglePdf ? 'Generating PDF...' : 'Download PDF'}
+                        {downloadingSinglePdf ? 'Genero PDF...' : 'Scarica PDF'}
                       </button>
                     </>
                   )}
@@ -566,7 +566,7 @@ export default function CourseView() {
             <section className="mt-12 border-t dark:border-gray-700 pt-12">
               <h3 className="text-2xl font-bold mb-6 flex items-center gap-2 text-gray-900 dark:text-gray-100">
                 <MessageCircle className="w-6 h-6 text-primary" />
-                Ask the AI Assistant
+                Chiedi alla AI
               </h3>
 
               <Thread
@@ -638,7 +638,7 @@ export default function CourseView() {
         }`}>
         <div className="p-6 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-gray-50 dark:bg-gray-900 z-10">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Course Curriculum</h2>
+            <h2 className="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Indice del corso</h2>
             <button
               onClick={handleGenerateAll}
               disabled={generatingAll}
@@ -652,12 +652,12 @@ export default function CourseView() {
               {generatingAll ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Generating...</span>
+                  <span>Genero...</span>
                 </>
               ) : (
                 <>
                   <Zap className="w-3.5 h-3.5" />
-                  <span>Generate All</span>
+                  <span>Genera tutto</span>
                 </>
               )}
             </button>
@@ -712,7 +712,7 @@ export default function CourseView() {
           {/* Progress Bar */}
           <div className="mt-4">
             <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-              <span>Progress</span>
+              <span>Progresso</span>
               <span className="font-semibold">
                 <span className="text-green-600 dark:text-green-400">{getCompletedCount()}</span>
                 <span className="text-gray-400 dark:text-gray-500 mx-1">/</span>
@@ -771,7 +771,7 @@ export default function CourseView() {
                 window.URL.revokeObjectURL(url);
               } catch (err) {
                 console.error('Download failed:', err);
-                toast.error('Failed to download full course PDF. Make sure all lessons are generated.');
+                toast.error('PDF non scaricato. Genera prima tutte le lezioni.');
               } finally {
                 setDownloadingPdf(false);
               }
@@ -819,7 +819,7 @@ export default function CourseView() {
                 window.URL.revokeObjectURL(url);
               } catch (err) {
                 console.error('Download failed:', err);
-                toast.error('Failed to download full course EPUB. Make sure all lessons are generated.');
+                toast.error('EPUB non scaricato. Genera prima tutte le lezioni.');
               } finally {
                 setDownloadingEpub(false);
               }
@@ -856,14 +856,14 @@ export default function CourseView() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full p-8"
           >
-            <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Regenerate Lesson</h3>
+            <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Rigenera lezione</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               Please describe what you'd like to improve or change in this lesson. The AI will regenerate the content based on your feedback.
             </p>
             <textarea
               value={regenerateFeedback}
               onChange={e => setRegenerateFeedback(e.target.value)}
-              placeholder="e.g., Add more practical examples, simplify the explanations, include more code snippets..."
+              placeholder="es. più esempi pratici, spiegazioni semplici, più codice..."
               className="w-full h-40 p-4 border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition resize-none"
               disabled={regenerating}
             />
@@ -886,7 +886,7 @@ export default function CourseView() {
                 {regenerating ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Regenerating...
+                    Rigenero...
                   </>
                 ) : (
                   <>
